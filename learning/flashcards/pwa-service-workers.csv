@@ -1,0 +1,6 @@
+"Question","Answer"
+"What does PWA stand for?","Progressive Web App."
+"What is the primary purpose of the manifest.json file in a PWA?","It provides metadata (like the app name, icons, and standalone display mode) that allows the website to be installed on a device's home screen."
+"What is a Service Worker?","A JavaScript script that runs in the background, separate from the web page, primarily used for offline caching, background sync, and push notifications."
+"Can Service Workers access the DOM (Document Object Model) directly?","No, they run in a separate worker context. They must communicate with the main page via the postMessage interface."
+"What is the 'standalone' display mode in a PWA manifest?","It makes the web app look like a native app by hiding standard browser UI elements like the address bar and navigation buttons."

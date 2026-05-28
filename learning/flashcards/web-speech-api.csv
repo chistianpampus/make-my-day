@@ -1,0 +1,5 @@
+"Question","Answer"
+"What are the two main interfaces of the Web Speech API?","SpeechRecognition (for Speech-to-Text) and SpeechSynthesis (for Text-to-Speech)."
+"Why is it advantageous to use the native Web Speech API instead of third-party cloud services?","It is built into modern browsers, completely free to use, and doesn't require managing external API keys or importing heavy audio libraries."
+"Which JavaScript object is instantiated to start listening to the user's voice in the browser?","The SpeechRecognition object (often accessed via window.SpeechRecognition or window.webkitSpeechRecognition)."
+"Does the Web Speech API's SpeechRecognition require an internet connection?","Usually yes. Many browsers (like Chrome) process the speech recognition via their own cloud servers in the background, although some limited offline support exists depending on the OS."

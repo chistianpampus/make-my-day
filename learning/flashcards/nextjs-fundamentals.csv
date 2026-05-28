@@ -1,0 +1,6 @@
+"Question","Answer"
+"What is Next.js?","A React framework for building fast, full-stack web applications."
+"What is the difference between Server and Client Components in Next.js?","Server components are rendered on the server for better performance, while Client components are rendered in the browser to handle user interactivity."
+"Which directive must be added to the top of a file to make it a Client Component?","""use client"";"
+"What is the App Router in Next.js?","A modern routing system where the folder structure inside the 'app' directory automatically dictates the application's URL routes."
+"What is the name of the file that makes a route publicly accessible in the Next.js App Router?","page.tsx (or page.jsx / page.js)"
