@@ -1,4 +1,26 @@
+"use client";
+
+import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
+import { useEffect } from 'react';
+
 export default function Home() {
+  const {
+    isListening,
+    transcript,
+    interimTranscript,
+    error,
+    toggleListening,
+    isSupported
+  } = useSpeechRecognition();
+
+  // For debugging or logging when transcript updates
+  useEffect(() => {
+    if (transcript) {
+      console.log("Final Transcript:", transcript);
+      // In Sprint 3, we will send this `transcript` to the LLM backend here!
+    }
+  }, [transcript]);
+
   return (
     <main>
       <header className="header">
@@ -7,6 +29,7 @@ export default function Home() {
       </header>
 
       <section className="glass-panel schedule-container">
+        {/* We will eventually map over actual data here */}
         <div className="task">
           <span className="time">09:00</span>
           <span className="title">Morning Routine</span>
@@ -19,14 +42,49 @@ export default function Home() {
           <span className="time">11:00</span>
           <span className="title">Install lawnmower</span>
         </div>
+        
+        {/* Display previous voice transcript for testing/verification */}
+        {transcript && (
+          <div className="task" style={{ borderLeft: '4px solid #3b82f6', background: 'rgba(59, 130, 246, 0.1)' }}>
+            <span className="time">New</span>
+            <span className="title">"{transcript}"</span>
+          </div>
+        )}
       </section>
 
-      <button className="mic-button" aria-label="Add voice task">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
-          <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
-          <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
-        </svg>
+      {/* Floating Transcript Bubble (visible only when listening or error) */}
+      {(isListening || error) && (
+        <div className={`transcript-bubble ${error ? 'error' : ''}`}>
+          {error ? error : (interimTranscript || "Listening...")}
+        </div>
+      )}
+
+      {/* Microphone Action Button */}
+      <button 
+        className={`mic-button ${isListening ? 'listening' : ''}`} 
+        onClick={toggleListening}
+        aria-label={isListening ? "Stop listening" : "Start voice input"}
+        disabled={!isSupported}
+      >
+        {isListening ? (
+          // Stop/Recording Icon (pulsing square)
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
+            <rect x="6" y="6" width="12" height="12" rx="2" />
+          </svg>
+        ) : (
+          // Standard Microphone Icon
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
+            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+          </svg>
+        )}
       </button>
+
+      {!isSupported && (
+        <p style={{ textAlign: 'center', color: '#ef4444', marginTop: '20px' }}>
+          Your browser doesn't support the Web Speech API.
+        </p>
+      )}
     </main>
   );
 }
