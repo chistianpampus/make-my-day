@@ -30,3 +30,7 @@ Development is divided into sprints. Agents work as follows:
 - If the user agrees, the agent must create two items for each concept:
   1. An `introduction.md` file in the `learning/introduction/` directory, describing the main concept on an introductory level.
   2. A `.csv` file in the `learning/flashcards/` directory, formatted for Anki import (containing concise Q&A flashcards about the core concepts).
+
+## 6. Architecture & Graphical Documentation
+- **Rule:** Before starting any major implementation tasks, the agent MUST document the architecture or verify the validity of existing architectural documentation.
+- **Graphical Requirement:** Architectural documentation should ideally be visual. The agent MUST proactively make proposals for creating or updating graphical architecture documentation (e.g., using Markdown Mermaid diagrams for component structures, data flows, or workflows).
