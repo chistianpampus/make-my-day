@@ -14,3 +14,7 @@ By default, Next.js uses **React Server Components (RSC)**.
 
 ### 3. Why we use it for "Make My Day"
 We are using Next.js because it allows us to quickly build a fast, SEO-friendly web app. We can build our UI components with React, while seamlessly preparing the app to be served as a Progressive Web App (PWA).
+
+### 4. Creating a Next.js Project with `npx`
+You often see commands like `npx create-next-app@latest`. 
+- **`npx` (Node Package Execute):** A tool that comes with `npm` (Node Package Manager). It allows you to run Node.js packages without installing them globally on your system. It temporarily downloads the latest version of a tool (like `create-next-app`), runs it to scaffold your project, and then removes the tool, keeping your system clean and ensuring you always use the most up-to-date generator.

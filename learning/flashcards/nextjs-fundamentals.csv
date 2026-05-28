@@ -4,3 +4,4 @@
 "Which directive must be added to the top of a file to make it a Client Component?","""use client"";"
 "What is the App Router in Next.js?","A modern routing system where the folder structure inside the 'app' directory automatically dictates the application's URL routes."
 "What is the name of the file that makes a route publicly accessible in the Next.js App Router?","page.tsx (or page.jsx / page.js)"
+"What is the purpose of 'npx' when creating a Next.js project?","It allows you to run packages (like create-next-app) without installing them globally, ensuring you always use the latest version to scaffold your project."
