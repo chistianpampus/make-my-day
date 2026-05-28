@@ -24,3 +24,9 @@ Development is divided into sprints. Agents work as follows:
 - **PROJECT LANGUAGE:** English. All code, documentation, and agent responses MUST be in English.
 - **Important Rule:** Even if the user asks a question or writes a prompt in German (or any other language), the AI agent must ALWAYS reply in English and write all documentation in English.
 - Communicate proactively, solution-oriented, and keep it concise. Focus on execution.
+
+## 5. Learning Materials Generation
+- **Rule:** Whenever new technical concepts or tools (e.g., Next.js, PWA, Firebase) are introduced to the project, the agent MUST proactively prompt the user to ask if learning materials should be generated for them.
+- If the user agrees, the agent must create two items for each concept:
+  1. An `introduction.md` file in the `learning/introduction/` directory, describing the main concept on an introductory level.
+  2. A `.csv` file in the `learning/flashcards/` directory, formatted for Anki import (containing concise Q&A flashcards about the core concepts).
