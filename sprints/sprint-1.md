@@ -1,15 +1,15 @@
-# Sprint 1: Basis-Setup & App-Gerüst
+# Sprint 1: Basic Setup & App Framework
 
-**Fokus:** Initialisierung des Projekts, Einrichtung der Entwicklungsumgebung und Aufbau der statischen Benutzeroberfläche.
+**Focus:** Initialization of the project, setup of the development environment, and construction of the static user interface.
 
-## 📋 Tasks für den Agenten
+## 📋 Tasks for the Agent
 
-- [ ] **Next.js Basis-App initialisieren:** Ein leeres Next.js Projekt im Root-Verzeichnis aufsetzen.
-- [ ] **PWA Support einrichten:** `manifest.json` und Service Worker konfigurieren, damit die App auf dem Homescreen installiert werden kann.
-- [ ] **Styling & Design System aufsetzen:** Ein modernes, lebendiges Design-System anlegen (Vanilla CSS / Tailwind je nach Präferenz, Dark Mode Support, moderne Typografie z.B. Inter/Roboto).
-- [ ] **Statische Tagesplan-UI bauen:** Das Layout für den Tagesplan implementieren, welches die Aufgaben und geblockten Zeiten chronologisch darstellt (vorerst mit statischen Dummy-Daten).
-- [ ] **Mikrofon-Button (UI) anlegen:** Einen prominenten Button für die Spracheingabe in das Layout integrieren (Logik folgt später).
-- [ ] **GitHub Initial-Commit:** Den Stand in das GitHub Repository pushen.
+- [ ] **Initialize Next.js Base App:** Set up an empty Next.js project in the root directory.
+- [ ] **Setup PWA Support:** Configure `manifest.json` and Service Worker so the app can be installed on the home screen.
+- [ ] **Setup Styling & Design System:** Create a modern, vibrant design system (Vanilla CSS / Tailwind depending on preference, Dark Mode support, modern typography e.g., Inter/Roboto).
+- [ ] **Build Static Daily Plan UI:** Implement the layout for the daily plan, which displays tasks and blocked times chronologically (initially with static dummy data).
+- [ ] **Create Microphone Button (UI):** Integrate a prominent button for voice input into the layout (logic follows later).
+- [ ] **GitHub Initial Commit:** Push the current state to the GitHub repository.
 
 ---
-*Sobald ein Task abgeschlossen ist, wird er vom Agenten in diesem Dokument als erledigt `[x]` markiert.*
+*Once a task is completed, the agent must mark it as done `[x]` in this document.*
