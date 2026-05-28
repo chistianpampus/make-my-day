@@ -43,11 +43,11 @@ export default function Home() {
           <span className="title">Install lawnmower</span>
         </div>
         
-        {/* Display previous voice transcript for testing/verification */}
-        {transcript && (
+        {/* Display previous voice transcript for testing/verification ONLY when stopped */}
+        {!isListening && transcript && (
           <div className="task" style={{ borderLeft: '4px solid #3b82f6', background: 'rgba(59, 130, 246, 0.1)' }}>
             <span className="time">New</span>
-            <span className="title">"{transcript}"</span>
+            <span className="title">"{transcript.trim()}"</span>
           </div>
         )}
       </section>
@@ -55,7 +55,7 @@ export default function Home() {
       {/* Floating Transcript Bubble (visible only when listening or error) */}
       {(isListening || error) && (
         <div className={`transcript-bubble ${error ? 'error' : ''}`}>
-          {error ? error : (interimTranscript || "Listening...")}
+          {error ? error : ((transcript + " " + interimTranscript).trim() || "Listening...")}
         </div>
       )}
 
