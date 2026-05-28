@@ -41,8 +41,37 @@ main {
 
 .header {
   text-align: center;
-  margin-bottom: 2.5rem;
+  margin-bottom: 1.5rem;
   margin-top: 1rem;
+}
+
+.nav-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.nav-tab {
+  padding: 0.5rem 1.5rem;
+  border-radius: 2rem;
+  text-decoration: none;
+  font-weight: 600;
+  color: var(--foreground);
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  transition: all 0.2s ease;
+}
+
+.nav-tab:hover {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: var(--primary);
+}
+
+.nav-tab.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
 }
 
 .header h1 {

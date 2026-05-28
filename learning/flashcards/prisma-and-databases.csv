@@ -1,0 +1,6 @@
+"Question","Answer"
+"What is a Relational Database?","A database that stores data in strict, organized tables that can relate to one another."
+"Why do we start with SQLite for MVP development instead of MySQL?","Because SQLite requires zero setup and no accounts, as it saves the entire database as a single file inside the project folder."
+"What is Prisma?","A modern ORM (Object-Relational Mapper) for Node.js and TypeScript that translates application code into database queries."
+"What is the name of the file where you define your database connection and tables (Models) in Prisma?","schema.prisma"
+"How difficult is it to switch from SQLite to MySQL when using Prisma?","Trivially easy. You only need to change the provider in schema.prisma, update the database URL in the .env file, and run 'npx prisma db push', without changing application code."

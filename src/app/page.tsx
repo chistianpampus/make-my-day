@@ -37,7 +37,7 @@ export default function Home() {
 
   const fetchTasks = async () => {
     try {
-      const res = await fetch('/api/tasks');
+      const res = await fetch('/api/tasks?excludeTimeframe=Unscheduled');
       const data = await res.json();
       setTasks(data);
     } catch (err) {
@@ -115,6 +115,11 @@ export default function Home() {
         <h1>Make My Day</h1>
         <p>Your Voice-Controlled Daily Planner</p>
       </header>
+
+      <nav className="nav-tabs">
+        <a href="/" className="nav-tab active">Today</a>
+        <a href="/backlog" className="nav-tab">Backlog</a>
+      </nav>
 
       <section className="glass-panel schedule-container">
         
@@ -195,7 +200,8 @@ export default function Home() {
           <button 
             className="secondary-action-button restart-button"
             onClick={() => {
-              lastProcessedTranscript.current = ''; 
+              // Set the current transcript as the 'lastProcessed' so the useEffect ignores it and doesn't send it to the AI
+              lastProcessedTranscript.current = transcript; 
               restartListening();
             }}
             aria-label="Restart dictation"
