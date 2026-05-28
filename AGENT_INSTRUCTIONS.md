@@ -11,8 +11,9 @@ This file contains global instructions and context for any AI agent working on t
 Development is divided into sprints. Agents work as follows:
 1. Check the currently active sprint in the `sprints/` folder (e.g., `sprint-1.md`).
 2. Strictly execute the tasks defined there.
-3. When you complete a task, you must update the markdown file and mark the task as done (`[x]`).
-4. Push working intermediate states to the GitHub repository.
+3. **Project Tickets Requirement:** At the beginning of every sprint, before starting development, the agent MUST automatically create GitHub issues (tickets) for all tasks in the sprint and add them to the GitHub Project board.
+4. When you complete a task, you must update the markdown file and mark the task as done (`[x]`).
+5. Push working intermediate states to the GitHub repository.
 
 ## 3. Coding Conventions & Design
 - **Mobile First:** The UI must primarily be developed for small smartphone screens. Large clickable areas, simple menus.
