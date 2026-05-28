@@ -37,3 +37,30 @@ Based on the functional requirements and the decisions made, the project will be
    - Fetched fixed **Google Calendar appointments**.
    - Open tasks from the **backlog**.
 6. The optimized daily plan is immediately updated and clearly displayed in the PWA.
+
+### Graphical System Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User
+    participant PWA as PWA (Next.js)
+    participant Speech as Web Speech API
+    participant Backend as Cloud Backend
+    participant LLM as Cloud LLM
+    participant DB as Cloud Database
+    participant GC as Google Calendar
+
+    User->>PWA: Taps Microphone & Speaks
+    PWA->>Speech: Start Voice Recognition
+    Speech-->>PWA: Returns Recognized Text String
+    PWA->>Backend: Sends Text via API
+    Backend->>LLM: Analyzes Text for Intent & Timeframe
+    LLM-->>Backend: Returns Structured Task Object
+    Backend->>DB: Saves New Task to Backlog
+    Backend->>DB: Fetches User Routines & Premises
+    Backend->>GC: Fetches Fixed Appointments
+    Backend->>Backend: Generates Optimized Daily Plan
+    Backend-->>PWA: Returns Updated Daily Plan
+    PWA-->>User: Displays New Schedule
+```
