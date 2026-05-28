@@ -20,10 +20,10 @@ export const useSpeechRecognition = () => {
 
       const recognition = new SpeechRecognition();
       
-      // Since no preference was given, we default to sensible standard behaviors:
-      recognition.continuous = false; // Stop when the user pauses speaking
-      recognition.interimResults = true; // Show text as the user is speaking
-      recognition.lang = window.navigator.language || 'en-US'; // Auto-detect user language
+      // User requested explicit stop, so continuous mode is true
+      recognition.continuous = true; 
+      recognition.interimResults = true; 
+      recognition.lang = window.navigator.language || 'en-US'; 
 
       recognition.onstart = () => {
         setIsListening(true);
@@ -85,6 +85,26 @@ export const useSpeechRecognition = () => {
     }
   }, [isListening]);
 
+  const restartListening = useCallback(() => {
+    if (recognitionRef.current) {
+      // First stop the current recognition
+      recognitionRef.current.stop();
+      // Reset the text state
+      setTranscript('');
+      setInterimTranscript('');
+      setError(null);
+      
+      // Start it again after a tiny delay to ensure the stop event finished
+      setTimeout(() => {
+        try {
+          recognitionRef.current.start();
+        } catch (err) {
+          console.error("Failed to restart", err);
+        }
+      }, 300);
+    }
+  }, []);
+
   const toggleListening = useCallback(() => {
     if (isListening) {
       stopListening();
@@ -101,6 +121,7 @@ export const useSpeechRecognition = () => {
     startListening,
     stopListening,
     toggleListening,
+    restartListening,
     isSupported: error !== "Your browser does not support Speech Recognition. Please try Chrome or Safari."
   };
 };
