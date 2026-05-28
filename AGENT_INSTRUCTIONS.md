@@ -34,3 +34,8 @@ Development is divided into sprints. Agents work as follows:
 ## 6. Architecture & Graphical Documentation
 - **Rule:** Before starting any major implementation tasks, the agent MUST document the architecture or verify the validity of existing architectural documentation.
 - **Graphical Requirement:** Architectural documentation should ideally be visual. The agent MUST proactively make proposals for creating or updating graphical architecture documentation (e.g., using Markdown Mermaid diagrams for component structures, data flows, or workflows).
+
+## 7. Version Control & Branching Strategy
+- **Rule:** Agents MUST NEVER develop new features or execute sprint tasks directly on the `main` branch. 
+- Before starting any development work, the agent MUST create and checkout a new development branch (e.g., `feature/sprint-1` or `feature/short-description`).
+- Changes should be committed to this feature branch and pushed to the remote repository.
