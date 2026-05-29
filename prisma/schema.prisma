@@ -15,9 +15,9 @@ datasource db {
 model Task {
   id                Int      @id @default(autoincrement())
   title             String
-  timeframe         String
+  timeConstraint    String?
+  scheduledStartTime String?
   priority          String   @default("Medium") // High, Medium, Low
-  isFlexible        Boolean  @default(true)     // true = flexible, false = strict
   completed         Boolean  @default(false)
   estimatedDuration Int?     // Duration in minutes
   scheduledDate     String?  // YYYY-MM-DD or null for 'Later'
@@ -27,7 +27,9 @@ model Task {
 model Routine {
   id          Int      @id @default(autoincrement())
   title       String
-  defaultTime String
+  timePremise String   // e.g. "before 08:00 or after 21:00"
+  minDuration Int      // minimum duration in minutes
+  maxDuration Int      // maximum duration in minutes
   daysOfWeek  String
   createdAt   DateTime @default(now())
 }

@@ -19,7 +19,7 @@ export default function Home() {
     isSupported
   } = useSpeechRecognition();
 
-  const { tasks, isLoadingTasks, toggleTaskCompletion, updateTask, deleteTask, addTask } = useTasks({});
+  const { tasks, isLoadingTasks, toggleTaskCompletion, updateTask, deleteTask, addTask, clearAllTasks } = useTasks({});
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLargeScreen, setIsLargeScreen] = useState(false);
   const [activeView, setActiveView] = useState<'today' | 'week'>('today');
@@ -44,12 +44,13 @@ export default function Home() {
   const lastProcessedTranscript = useRef<string>('');
 
   useEffect(() => {
-    if (!isListening && transcript && transcript !== lastProcessedTranscript.current) {
-      lastProcessedTranscript.current = transcript;
-      processTranscript(transcript);
+    const fullText = (transcript + " " + interimTranscript).trim();
+    if (!isListening && fullText && fullText !== lastProcessedTranscript.current) {
+      lastProcessedTranscript.current = fullText;
+      processTranscript(fullText);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isListening, transcript]);
+  }, [isListening, transcript, interimTranscript]);
 
   const processTranscript = async (text: string) => {
     setIsProcessing(true);
@@ -97,9 +98,32 @@ export default function Home() {
 
   return (
     <main>
-      <header className="header">
-        <h1>Make My Day</h1>
-        <p>Your Voice-Controlled Daily Planner</p>
+      <header className="header" style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h1 style={{ margin: 0 }}>Make My Day</h1>
+          <p style={{ margin: '4px 0 0 0' }}>Your Voice-Controlled Daily Planner</p>
+        </div>
+        <button 
+          onClick={clearAllTasks}
+          style={{ 
+            background: 'transparent', 
+            border: '1px solid #ef4444', 
+            color: '#ef4444', 
+            padding: '6px 12px', 
+            borderRadius: '8px', 
+            cursor: 'pointer', 
+            fontSize: '0.8rem', 
+            opacity: 0.7,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}
+          title="Alle Tasks löschen"
+          onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+          onMouseLeave={(e) => e.currentTarget.style.opacity = '0.7'}
+        >
+          🗑️ Clear DB
+        </button>
       </header>
 
       <nav className="nav-tabs">

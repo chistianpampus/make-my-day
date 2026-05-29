@@ -1,9 +1,9 @@
 export type Task = {
   id: number;
   title: string;
-  timeframe: string;
+  timeConstraint: string | null;
+  scheduledStartTime: string | null;
   priority: string;
-  isFlexible: boolean;
   completed: boolean;
   estimatedDuration: number | null;
   scheduledDate: string | null;

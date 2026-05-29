@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     
     const timeContext = currentTime ? `The current date and time is: ${currentTime}. Use this to understand relative terms like "tomorrow", "next week", etc.\n` : '';
     const tasksContext = existingTasks && existingTasks.length > 0 
-      ? `Here are the user's CURRENT tasks. If the user's dictation refers to changing/updating one of these (e.g. changing its time, duration, or title), you should UPDATE it instead of creating a new one.\nCurrent Tasks: ${JSON.stringify(existingTasks.map((t: any) => ({ id: t.id, title: t.title, timeframe: t.timeframe, estimatedDuration: t.estimatedDuration })))}\n`
+      ? `Here are the user's CURRENT tasks. If the user's dictation refers to changing/updating one of these (e.g. changing its time, duration, or title), you should UPDATE it instead of creating a new one.\nCurrent Tasks: ${JSON.stringify(existingTasks.map((t: any) => ({ id: t.id, title: t.title, timeConstraint: t.timeConstraint, scheduledStartTime: t.scheduledStartTime, estimatedDuration: t.estimatedDuration })))}\n`
       : 'The user has no existing tasks right now.\n';
 
     const response = await openai.chat.completions.create({
@@ -32,11 +32,10 @@ ${tasksContext}
 1. Fix any grammar, capitalization, and punctuation.
 2. CRITICAL: Do NOT translate the task. Output the title in the exact same language the user spoke it.
 3. Keep the title concise and action-oriented.
-4. If no timeframe is mentioned, set it to "Unscheduled". If a relative date is mentioned, use the current date and time to figure it out and specify it clearly.
+4. Extract any free-text time constraints or specific times the user mentions into the 'timeConstraint' field (e.g., "am Nachmittag", "after lunch", "exactly at 11:00"). CRITICAL: Strip out any day references like "heute" or "morgen" from this string! For example, if the user says "heute am Vormittag", this field must be strictly "am Vormittag". If no constraints are mentioned, set it to null.
 5. Determine priority ("High", "Medium", "Low") based on the urgency of the user's voice command.
-6. Determine if the task is time-flexible (isFlexible: boolean). If the user mentions a strict meeting or appointment, it's false. Otherwise true.
-7. Estimate the duration of the task in minutes (estimatedDuration: number). If the user specifies a duration, use it. Otherwise, estimate it based on typical values for such a task.
-8. If the task is scheduled for a specific day, provide a `scheduledDate` in YYYY-MM-DD format based on the current date/time context. If the task is for today, use today's date. If it's for 'tomorrow', use tomorrow's date, etc. If it's unscheduled, set `scheduledDate` to `null`.
+6. Estimate the duration of the task in minutes (estimatedDuration: number). If the user specifies a duration, use it. Otherwise, estimate it based on typical values for such a task.
+8. If the task is scheduled for a specific day, provide a 'scheduledDate' in YYYY-MM-DD format based on the current date/time context. If the task is for today/heute, use today's date. If it's for 'tomorrow'/'morgen', use tomorrow's date. If a weekday like 'Freitag' is mentioned, calculate its YYYY-MM-DD date. If it's unscheduled, set 'scheduledDate' to null.
 
 Decide if the user wants to CREATE new tasks, or UPDATE existing ones from the 'Current Tasks' list.
 Output strict JSON matching this schema:
@@ -44,9 +43,8 @@ Output strict JSON matching this schema:
   "create": [
     {
       "title": "Cleaned up task title in the original language",
-      "timeframe": "Extracted timeframe (e.g. 'Morning', '10:00', 'Tomorrow', 'Unscheduled')",
+      "timeConstraint": "Extracted time constraint (e.g. 'after lunch', 'exactly at 11:00') or null",
       "priority": "Medium",
-      "isFlexible": true,
       "estimatedDuration": 30,
       "scheduledDate": "2023-10-26"
     }
@@ -89,9 +87,8 @@ Output strict JSON matching this schema:
       tasksToCreate.map((task: any) =>
         TaskService.createTask({
           title: task.title,
-          timeframe: task.timeframe,
+          timeConstraint: task.timeConstraint,
           priority: task.priority,
-          isFlexible: task.isFlexible,
           estimatedDuration: task.estimatedDuration,
           scheduledDate: task.scheduledDate,
         })

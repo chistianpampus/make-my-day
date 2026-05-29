@@ -1,10 +1,9 @@
-# Sprint 5: Google Calendar & Scheduling Engine
+# Sprint 5: Scheduling Engine
 
-**Focus:** Integrate Google Calendar to fetch blocked times and build the algorithm that generates the final daily schedule.
+**Focus:** Build the scheduling algorithm that generates the final daily schedule based on tasks and routines.
 
 ## 📋 Tasks for the Agent
 
-- [ ] **Google OAuth Setup:** Implement Google authentication to request read access to the user's calendar.
-- [ ] **Fetch Calendar Events:** Retrieve the user's fixed appointments for the current day.
-- [ ] **Scheduling Algorithm:** Build the logic that takes fixed appointments, fixed routines, and available backlog tasks, and combines them into an optimized daily schedule with generous breaks.
+- [ ] **Scheduling Algorithm:** Build the logic that takes fixed routines, constraints, and available backlog tasks, and combines them into an optimized daily schedule with generous breaks.
 - [ ] **Dynamic Daily Plan UI:** Connect the scheduling algorithm to the main `page.tsx` UI so the static dummy data is replaced by the real generated schedule.
+- [ ] **LLM Integration:** If using the LLM for the algorithm (as per `generate-schedule`), ensure the output strictly maps to the UI timeline.

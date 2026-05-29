@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Task } from '../types';
+import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 
 interface TaskCardProps {
   task: Task;
@@ -11,14 +12,59 @@ interface TaskCardProps {
 export function TaskCard({ task, onToggle, onDelete, onUpdate }: TaskCardProps) {
   // Local state for inline editing
   const [title, setTitle] = useState(task.title);
-  const [timeframe, setTimeframe] = useState(task.timeframe);
+  const [scheduledStartTime, setScheduledStartTime] = useState(task.scheduledStartTime || '');
+  const [scheduledDate, setScheduledDate] = useState(task.scheduledDate || '');
   const [duration, setDuration] = useState(task.estimatedDuration ? task.estimatedDuration.toString() : '');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // AI Edit State
+  const [isAIEditOpen, setIsAIEditOpen] = useState(false);
+  const [aiText, setAiText] = useState('');
+  const [isAILoading, setIsAILoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  
+  const { isListening, transcript, toggleListening } = useSpeechRecognition();
+  
+  useEffect(() => {
+    if (transcript) setAiText(transcript);
+  }, [transcript]);
+
+  const handleAIEditSubmit = async () => {
+    if (!aiText.trim()) return;
+    setIsAILoading(true);
+    setAiError(null);
+    try {
+      const res = await fetch('/api/edit-single-task', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskId: task.id, transcript: aiText, task })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to update task');
+      }
+      
+      if (data.updated && onUpdate) {
+        onUpdate(task.id, data.updated); 
+      }
+      
+      setIsAIEditOpen(false);
+      setAiText('');
+    } catch (err: any) {
+      setAiError(err.message || 'AI konnte den Befehl nicht verarbeiten');
+      setTimeout(() => setAiError(null), 3000);
+      setIsAIEditOpen(false);
+      setAiText('');
+    } finally {
+      setIsAILoading(false);
+    }
+  };
+
   // Sync state if props change from outside
   useEffect(() => setTitle(task.title), [task.title]);
-  useEffect(() => setTimeframe(task.timeframe), [task.timeframe]);
-  useEffect(() => setDuration(task.estimatedDuration ? task.estimatedDuration.toString() : '')), [task.estimatedDuration];
+  useEffect(() => setScheduledStartTime(task.scheduledStartTime || ''), [task.scheduledStartTime]);
+  useEffect(() => setScheduledDate(task.scheduledDate || ''), [task.scheduledDate]);
+  useEffect(() => setDuration(task.estimatedDuration ? task.estimatedDuration.toString() : ''), [task.estimatedDuration]);
 
   // Auto-resize the textarea for the title
   useEffect(() => {
@@ -35,6 +81,7 @@ export function TaskCard({ task, onToggle, onDelete, onUpdate }: TaskCardProps) 
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    e.stopPropagation();
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       e.currentTarget.blur(); // Triggers onBlur
@@ -59,7 +106,7 @@ export function TaskCard({ task, onToggle, onDelete, onUpdate }: TaskCardProps) 
     >
       {/* Top Row: Timeframe (left) and Actions (right) */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <input 
             type="checkbox" 
             checked={task.completed} 
@@ -68,9 +115,11 @@ export function TaskCard({ task, onToggle, onDelete, onUpdate }: TaskCardProps) 
             aria-label="Mark completed"
           />
           <input 
-            value={timeframe}
-            onChange={(e) => setTimeframe(e.target.value)}
-            onBlur={() => handleUpdate('timeframe', timeframe)}
+            value={scheduledStartTime}
+            onChange={(e) => setScheduledStartTime(e.target.value)}
+            onBlur={() => {
+              handleUpdate('scheduledStartTime', scheduledStartTime.trim() === '' ? null : scheduledStartTime);
+            }}
             onKeyDown={handleKeyDown}
             style={{ 
               fontWeight: 600, 
@@ -84,23 +133,56 @@ export function TaskCard({ task, onToggle, onDelete, onUpdate }: TaskCardProps) 
               outline: 'none'
             }}
             placeholder="00:00"
-            title="Klicken zum Bearbeiten"
+            title="Uhrzeit bearbeiten"
           />
         </div>
 
         <div className="task-actions-compact" style={{ display: 'flex', gap: '4px', opacity: 0.7 }}>
           <button 
-            onClick={() => onDelete(task.id)}
-            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px', borderRadius: '4px' }}
-            title="Task löschen"
+            onClick={() => setIsAIEditOpen(!isAIEditOpen)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '4px', opacity: isAIEditOpen ? 1 : 0.6 }}
+            title="AI Edit"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="3 6 5 6 21 6"></polyline>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-            </svg>
+            ✨
           </button>
         </div>
       </div>
+
+      {/* AI Edit Row */}
+      {isAIEditOpen && (
+        <div style={{ width: '100%', display: 'flex', gap: '8px', alignItems: 'center', background: 'rgba(59, 130, 246, 0.1)', padding: '6px 8px', borderRadius: '4px', marginTop: '4px', border: '1px dashed var(--primary)' }}>
+          <button 
+            onClick={toggleListening}
+            style={{ background: isListening ? '#ef4444' : 'var(--surface)', color: isListening ? 'white' : 'var(--foreground)', border: 'none', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+          >
+            🎤
+          </button>
+          <input 
+            value={aiText}
+            onChange={e => setAiText(e.target.value)}
+            onKeyDown={e => {
+              e.stopPropagation();
+              if (e.key === 'Enter') handleAIEditSubmit();
+            }}
+            placeholder="Was soll ich ändern?"
+            style={{ flexGrow: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: '0.85rem', color: 'var(--foreground)' }}
+            disabled={isAILoading}
+            autoFocus
+          />
+          <button 
+            onClick={handleAIEditSubmit}
+            disabled={isAILoading || !aiText.trim()}
+            style={{ background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', fontSize: '0.8rem', cursor: isAILoading || !aiText.trim() ? 'not-allowed' : 'pointer', opacity: isAILoading || !aiText.trim() ? 0.5 : 1 }}
+          >
+            {isAILoading ? '⏳' : 'GO'}
+          </button>
+        </div>
+      )}
+      {aiError && (
+        <div style={{ width: '100%', padding: '4px', color: '#ef4444', fontSize: '0.75rem', textAlign: 'center' }}>
+          {aiError}
+        </div>
+      )}
       
       {/* Middle Row: Full width Title */}
       <div style={{ width: '100%' }}>
@@ -131,6 +213,24 @@ export function TaskCard({ task, onToggle, onDelete, onUpdate }: TaskCardProps) 
           title="Klicken zum Bearbeiten"
         />
       </div>
+
+      {/* Time Constraint Display */}
+      {task.timeConstraint && (
+        <div style={{ width: '100%', padding: '0 4px', marginTop: '-2px', marginBottom: '4px' }}>
+          <span style={{ 
+            fontSize: '0.75rem', 
+            fontStyle: 'italic', 
+            opacity: 0.7, 
+            color: 'var(--foreground)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px'
+          }}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            {task.timeConstraint}
+          </span>
+        </div>
+      )}
 
       {/* Bottom Row: Centered Badges */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', width: '100%', marginTop: '2px' }}>
@@ -169,26 +269,21 @@ export function TaskCard({ task, onToggle, onDelete, onUpdate }: TaskCardProps) 
           /> 
           min
         </span>
-        
-        <button 
-          onClick={() => onUpdate && onUpdate(task.id, { isFlexible: !task.isFlexible })}
-          style={{ 
-            fontSize: '0.75rem', 
-            background: 'var(--surface-border)', 
-            padding: '3px 8px', 
-            borderRadius: '6px', 
-            color: 'var(--foreground)', 
-            opacity: 0.85,
-            border: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center'
-          }}
-          title="Klicken um zwischen Flexibel und Strict zu wechseln"
-        >
-          {task.isFlexible ? '🧘 Flexible' : '📌 Strict'}
-        </button>
       </div>
+
+      {/* Delete Button (Bottom Left) */}
+      <button 
+        onClick={() => onDelete(task.id)}
+        style={{ position: 'absolute', bottom: '8px', left: '8px', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px', borderRadius: '4px', opacity: 0.6, transition: 'opacity 0.2s' }}
+        title="Task löschen"
+        onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+        onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        </svg>
+      </button>
     </div>
   );
 }

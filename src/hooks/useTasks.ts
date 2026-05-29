@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Task } from '../types';
 
-export const useTasks = (options?: { timeframe?: string, excludeTimeframe?: string }) => {
+export const useTasks = (options?: { scheduledDate?: string | null }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoadingTasks, setIsLoadingTasks] = useState(true);
 
@@ -12,8 +12,13 @@ export const useTasks = (options?: { timeframe?: string, excludeTimeframe?: stri
     try {
       setIsLoadingTasks(true);
       const params = new URLSearchParams();
-      if (options?.timeframe) params.append('timeframe', options.timeframe);
-      if (options?.excludeTimeframe) params.append('excludeTimeframe', options.excludeTimeframe);
+      if (options && 'scheduledDate' in options) {
+        if (options.scheduledDate === null) {
+          params.append('scheduledDate', 'null');
+        } else if (options.scheduledDate !== undefined) {
+          params.append('scheduledDate', options.scheduledDate);
+        }
+      }
       
       const res = await fetch(`/api/tasks?${params.toString()}`);
       if (!res.ok) throw new Error('Failed to fetch tasks');
@@ -90,5 +95,19 @@ export const useTasks = (options?: { timeframe?: string, excludeTimeframe?: stri
     }
   }, [fetchTasks]);
 
-  return { tasks, isLoadingTasks, addTask, toggleTaskCompletion, updateTask, deleteTask, fetchTasks };
+  const clearAllTasks = useCallback(async () => {
+    if (!confirm("Are you sure you want to delete ALL tasks? This cannot be undone.")) return;
+    
+    setTasks([]);
+    
+    try {
+      const res = await fetch(`/api/tasks`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Clear all failed');
+    } catch (err) {
+      console.error('Failed to clear all tasks', err);
+      fetchTasks();
+    }
+  }, [fetchTasks]);
+
+  return { tasks, isLoadingTasks, addTask, toggleTaskCompletion, updateTask, deleteTask, clearAllTasks, fetchTasks };
 };

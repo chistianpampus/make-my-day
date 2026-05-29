@@ -53,12 +53,12 @@ export function WeekView({ tasks: initialTasks, onTaskUpdate, onToggle, onDelete
   const getTasksForDate = (dateStr: string | null) => {
     return tasks.filter(t => {
       if (dateStr === todayStr) {
-        const isImplicitlyToday = !t.scheduledDate && t.timeframe !== 'Unscheduled';
+        const isImplicitlyToday = !t.scheduledDate && t.scheduledStartTime !== null;
         const isExplicitlyTodayOrPast = t.scheduledDate && t.scheduledDate <= todayStr && t.scheduledDate !== 'later';
         return isExplicitlyTodayOrPast || isImplicitlyToday;
       }
       if (dateStr === null) {
-        const isImplicitlyToday = !t.scheduledDate && t.timeframe !== 'Unscheduled';
+        const isImplicitlyToday = !t.scheduledDate && t.scheduledStartTime !== null;
         if (isImplicitlyToday) return false;
         if (!t.scheduledDate || t.scheduledDate === 'later') return true;
         return t.scheduledDate > day3Str;
@@ -93,7 +93,7 @@ export function WeekView({ tasks: initialTasks, onTaskUpdate, onToggle, onDelete
       const overTask = tasks.find(t => t.id === overTaskId);
       if (overTask) {
         const sd = overTask.scheduledDate;
-        const isImplicitlyToday = !sd && overTask.timeframe !== 'Unscheduled';
+        const isImplicitlyToday = !sd && overTask.scheduledStartTime !== null;
         const isExplicitlyTodayOrPast = sd && sd <= todayStr && sd !== 'later';
         
         if (isExplicitlyTodayOrPast || isImplicitlyToday) targetContainerId = 'container-today';
@@ -151,7 +151,7 @@ export function WeekView({ tasks: initialTasks, onTaskUpdate, onToggle, onDelete
       const overTask = tasks.find(t => t.id === overTaskId);
       if (overTask) {
         const sd = overTask.scheduledDate;
-        const isImplicitlyToday = !sd && overTask.timeframe !== 'Unscheduled';
+        const isImplicitlyToday = !sd && overTask.scheduledStartTime !== null;
         const isExplicitlyTodayOrPast = sd && sd <= todayStr && sd !== 'later';
         
         if (isExplicitlyTodayOrPast || isImplicitlyToday) targetContainerId = 'container-today';

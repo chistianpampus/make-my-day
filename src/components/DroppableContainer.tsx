@@ -9,9 +9,10 @@ interface DroppableContainerProps {
   emptyText?: string;
   isDropZoneOnly?: boolean;
   isHighlighted?: boolean;
+  headerRight?: React.ReactNode;
 }
 
-export function DroppableContainer({ id, title, subtitle, children, emptyText, isDropZoneOnly, isHighlighted }: DroppableContainerProps) {
+export function DroppableContainer({ id, title, subtitle, children, emptyText, isDropZoneOnly, isHighlighted, headerRight }: DroppableContainerProps) {
   const { setNodeRef } = useDroppable({
     id,
     data: { type: 'Container', containerId: id }
@@ -48,9 +49,12 @@ export function DroppableContainer({ id, title, subtitle, children, emptyText, i
 
   return (
     <div ref={setNodeRef} style={style}>
-      <div>
-        <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--foreground)' }}>{title}</h3>
-        {subtitle && <span style={{ fontSize: '0.8rem', opacity: 0.6 }}>{subtitle}</span>}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--foreground)' }}>{title}</h3>
+          {subtitle && <span style={{ fontSize: '0.8rem', opacity: 0.6 }}>{subtitle}</span>}
+        </div>
+        {headerRight && <div>{headerRight}</div>}
       </div>
       
       {!isDropZoneOnly && (

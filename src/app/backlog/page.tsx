@@ -4,7 +4,7 @@ import { useTasks } from '../../hooks/useTasks';
 import { TaskList } from '../../components/TaskList';
 
 export default function Backlog() {
-  const { tasks, isLoadingTasks, toggleTaskCompletion, deleteTask, updateTask } = useTasks({ timeframe: 'Unscheduled' });
+  const { tasks, isLoadingTasks, toggleTaskCompletion, deleteTask, updateTask } = useTasks({ scheduledDate: null });
 
   return (
     <main>

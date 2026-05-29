@@ -17,6 +17,7 @@ The **"Make My Day"** project is a tool for planning the day. The goal is to pla
   - The system must estimate the duration of a task if not explicitly mentioned by the user.
   - The system must be capable of extracting and separating multiple independent tasks from a single voice dictation.
   - The system must understand voice commands to update existing tasks (e.g., changing time or title).
+  - The system must distinguish between a concrete date (`scheduledDate`), an algorithmic time slot (`assignedTime`), and a complex user-defined time constraint (e.g., "not before 13:00", "exactly at 11:00", "after mowing the lawn").
   - Remaining free time in the daily plan should be automatically filled with tasks from the backlog.
 - [ ] **Planning Premises**: The planning should be generous, e.g., with automatic breaks of 10-15 minutes between individual activities.
 - [ ] **Task Editing**: Users must be able to manually edit tasks (Title, Timeframe, Priority, Duration, etc.) via keyboard/UI directly in the list.
