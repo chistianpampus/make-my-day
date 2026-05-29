@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Task } from '../types';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
+import { useCompactView } from '../contexts/CompactViewContext';
 
 interface TaskCardProps {
   task: Task;
@@ -10,12 +11,16 @@ interface TaskCardProps {
 }
 
 export function TaskCard({ task, onToggle, onDelete, onUpdate }: TaskCardProps) {
+  const { isCompact } = useCompactView();
   // Local state for inline editing
   const [title, setTitle] = useState(task.title);
   const [scheduledStartTime, setScheduledStartTime] = useState(task.scheduledStartTime || '');
   const [scheduledDate, setScheduledDate] = useState(task.scheduledDate || '');
   const [duration, setDuration] = useState(task.estimatedDuration ? task.estimatedDuration.toString() : '');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Hover state for compact view expansion
+  const [isHovered, setIsHovered] = useState(false);
 
   // AI Edit State
   const [isAIEditOpen, setIsAIEditOpen] = useState(false);
@@ -88,65 +93,202 @@ export function TaskCard({ task, onToggle, onDelete, onUpdate }: TaskCardProps) 
     }
   };
 
+  const effectivelyCompact = isCompact && !isHovered && !isAIEditOpen;
+
   return (
     <div 
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       className={`task ${task.completed ? 'completed' : ''} task-card-hover`}
       style={{ 
         borderLeft: `4px solid ${task.priority === 'High' ? '#ef4444' : task.priority === 'Medium' ? '#f59e0b' : '#3b82f6'}`, 
         background: task.completed ? 'rgba(0,0,0,0.03)' : 'var(--surface)',
         opacity: task.completed ? 0.6 : 1,
-        padding: '12px 16px',
+        padding: effectivelyCompact ? '8px 12px' : '12px 16px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '6px',
+        gap: effectivelyCompact ? '4px' : '6px',
         position: 'relative',
         width: '100%',
         transition: 'all 0.2s ease'
       }}
     >
-      {/* Top Row: Timeframe (left) and Actions (right) */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <input 
-            type="checkbox" 
-            checked={task.completed} 
-            onChange={() => onToggle(task.id, task.completed)} 
-            style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--primary)' }}
-            aria-label="Mark completed"
-          />
+      {effectivelyCompact ? (
+        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', width: '100%', gap: '8px', overflow: 'hidden' }}>
           <input 
             value={scheduledStartTime}
             onChange={(e) => setScheduledStartTime(e.target.value)}
-            onBlur={() => {
-              handleUpdate('scheduledStartTime', scheduledStartTime.trim() === '' ? null : scheduledStartTime);
-            }}
+            onBlur={() => handleUpdate('scheduledStartTime', scheduledStartTime.trim() === '' ? null : scheduledStartTime)}
             onKeyDown={handleKeyDown}
-            style={{ 
-              fontWeight: 600, 
-              color: 'var(--primary)', 
-              fontSize: '0.95rem',
-              background: 'transparent',
-              border: '1px solid transparent',
-              borderRadius: '4px',
-              padding: '2px 4px',
-              width: '80px',
-              outline: 'none'
-            }}
+            style={{ fontWeight: 600, color: 'var(--primary)', fontSize: '0.85rem', background: 'transparent', border: 'none', width: '42px', outline: 'none', flexShrink: 0, padding: 0 }}
             placeholder="00:00"
-            title="Uhrzeit bearbeiten"
           />
+          <input 
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onBlur={() => handleUpdate('title', title)}
+            onKeyDown={handleKeyDown}
+            style={{ fontWeight: 500, fontSize: '0.9rem', flexGrow: 1, flexShrink: 1, background: 'transparent', border: 'none', color: 'var(--foreground)', outline: 'none', minWidth: '150px', textOverflow: 'ellipsis' }}
+            placeholder="Task Titel"
+          />
+          {task.timeConstraint && (
+            <span style={{ fontSize: '0.7rem', fontStyle: 'italic', opacity: 0.7, whiteSpace: 'nowrap', flexShrink: 1, maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {task.timeConstraint}
+            </span>
+          )}
+          <span style={{ fontSize: '0.7rem', background: 'var(--surface-border)', padding: '2px 6px', borderRadius: '4px', opacity: 0.85, display: 'flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            ⏱ <input type="number" value={duration} onChange={(e) => setDuration(e.target.value)} onBlur={() => handleUpdate('estimatedDuration', duration ? parseInt(duration) : null)} onKeyDown={handleKeyDown} style={{ width: '22px', background: 'transparent', border: 'none', color: 'inherit', fontSize: 'inherit', textAlign: 'center', outline: 'none', padding: 0 }} placeholder="0" /> min
+          </span>
+          <button onClick={() => setIsAIEditOpen(!isAIEditOpen)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px', opacity: isAIEditOpen ? 1 : 0.6, flexShrink: 0 }} title="AI Edit">✨</button>
         </div>
+      ) : (
+        <>
+          {/* Top Row: Timeframe (left) and Actions (right) */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <input 
+                type="checkbox" 
+                checked={task.completed} 
+                onChange={() => onToggle(task.id, task.completed)} 
+                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--primary)' }}
+                aria-label="Mark completed"
+              />
+              <input 
+                value={scheduledStartTime}
+                onChange={(e) => setScheduledStartTime(e.target.value)}
+                onBlur={() => {
+                  handleUpdate('scheduledStartTime', scheduledStartTime.trim() === '' ? null : scheduledStartTime);
+                }}
+                onKeyDown={handleKeyDown}
+                style={{ 
+                  fontWeight: 600, 
+                  color: 'var(--primary)', 
+                  fontSize: '0.95rem',
+                  background: 'transparent',
+                  border: '1px solid transparent',
+                  borderRadius: '4px',
+                  padding: '2px 4px',
+                  width: '80px',
+                  outline: 'none'
+                }}
+                placeholder="00:00"
+                title="Uhrzeit bearbeiten"
+              />
+            </div>
 
-        <div className="task-actions-compact" style={{ display: 'flex', gap: '4px', opacity: 0.7 }}>
+            <div className="task-actions-compact" style={{ display: 'flex', gap: '4px', opacity: 0.7 }}>
+              <button 
+                onClick={() => setIsAIEditOpen(!isAIEditOpen)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '4px', opacity: isAIEditOpen ? 1 : 0.6 }}
+                title="AI Edit"
+              >
+                ✨
+              </button>
+            </div>
+          </div>
+
+          {/* Middle Row: Full width Title */}
+          <div style={{ width: '100%' }}>
+            <textarea 
+              ref={textareaRef}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onBlur={() => handleUpdate('title', title)}
+              onKeyDown={handleKeyDown}
+              rows={1}
+              style={{ 
+                fontWeight: 500, 
+                fontSize: '1rem',
+                textDecoration: task.completed ? 'line-through' : 'none',
+                width: '100%',
+                background: 'transparent',
+                border: '1px solid transparent',
+                borderRadius: '4px',
+                padding: '2px 4px',
+                color: 'var(--foreground)',
+                outline: 'none',
+                resize: 'none',
+                overflow: 'hidden',
+                lineHeight: 1.4,
+                fontFamily: 'inherit'
+              }}
+              placeholder="Task Titel"
+              title="Klicken zum Bearbeiten"
+            />
+          </div>
+
+          {/* Time Constraint Display */}
+          {task.timeConstraint && (
+            <div style={{ width: '100%', padding: '0 4px', marginTop: '-2px', marginBottom: '4px' }}>
+              <span style={{ 
+                fontSize: '0.75rem', 
+                fontStyle: 'italic', 
+                opacity: 0.7, 
+                color: 'var(--foreground)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                {task.timeConstraint}
+              </span>
+            </div>
+          )}
+
+          {/* Bottom Row: Centered Badges */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', width: '100%', marginTop: '2px' }}>
+            <span 
+              style={{ 
+                fontSize: '0.75rem', 
+                background: 'var(--surface-border)', 
+                padding: '3px 8px', 
+                borderRadius: '6px', 
+                color: 'var(--foreground)', 
+                opacity: 0.85,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '2px'
+              }}
+              title="Dauer in Minuten bearbeiten"
+            >
+              ⏱ 
+              <input 
+                type="number"
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                onBlur={() => handleUpdate('estimatedDuration', duration ? parseInt(duration) : null)}
+                onKeyDown={handleKeyDown}
+                style={{
+                  width: '30px',
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'inherit',
+                  fontSize: 'inherit',
+                  textAlign: 'center',
+                  outline: 'none',
+                  padding: 0
+                }}
+                placeholder="0"
+              /> 
+              min
+            </span>
+          </div>
+
+          {/* Delete Button (Bottom Left) */}
           <button 
-            onClick={() => setIsAIEditOpen(!isAIEditOpen)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '4px', opacity: isAIEditOpen ? 1 : 0.6 }}
-            title="AI Edit"
+            onClick={() => onDelete(task.id)}
+            style={{ position: 'absolute', bottom: '8px', left: '8px', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px', borderRadius: '4px', opacity: 0.6, transition: 'opacity 0.2s' }}
+            title="Task löschen"
+            onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+            onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
           >
-            ✨
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
           </button>
-        </div>
-      </div>
+        </>
+      )}
 
       {/* AI Edit Row */}
       {isAIEditOpen && (
@@ -183,107 +325,6 @@ export function TaskCard({ task, onToggle, onDelete, onUpdate }: TaskCardProps) 
           {aiError}
         </div>
       )}
-      
-      {/* Middle Row: Full width Title */}
-      <div style={{ width: '100%' }}>
-        <textarea 
-          ref={textareaRef}
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          onBlur={() => handleUpdate('title', title)}
-          onKeyDown={handleKeyDown}
-          rows={1}
-          style={{ 
-            fontWeight: 500, 
-            fontSize: '1rem',
-            textDecoration: task.completed ? 'line-through' : 'none',
-            width: '100%',
-            background: 'transparent',
-            border: '1px solid transparent',
-            borderRadius: '4px',
-            padding: '2px 4px',
-            color: 'var(--foreground)',
-            outline: 'none',
-            resize: 'none',
-            overflow: 'hidden',
-            lineHeight: 1.4,
-            fontFamily: 'inherit'
-          }}
-          placeholder="Task Titel"
-          title="Klicken zum Bearbeiten"
-        />
-      </div>
-
-      {/* Time Constraint Display */}
-      {task.timeConstraint && (
-        <div style={{ width: '100%', padding: '0 4px', marginTop: '-2px', marginBottom: '4px' }}>
-          <span style={{ 
-            fontSize: '0.75rem', 
-            fontStyle: 'italic', 
-            opacity: 0.7, 
-            color: 'var(--foreground)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px'
-          }}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-            {task.timeConstraint}
-          </span>
-        </div>
-      )}
-
-      {/* Bottom Row: Centered Badges */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', width: '100%', marginTop: '2px' }}>
-        <span 
-          style={{ 
-            fontSize: '0.75rem', 
-            background: 'var(--surface-border)', 
-            padding: '3px 8px', 
-            borderRadius: '6px', 
-            color: 'var(--foreground)', 
-            opacity: 0.85,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '2px'
-          }}
-          title="Dauer in Minuten bearbeiten"
-        >
-          ⏱ 
-          <input 
-            type="number"
-            value={duration}
-            onChange={(e) => setDuration(e.target.value)}
-            onBlur={() => handleUpdate('estimatedDuration', duration ? parseInt(duration) : null)}
-            onKeyDown={handleKeyDown}
-            style={{
-              width: '30px',
-              background: 'transparent',
-              border: 'none',
-              color: 'inherit',
-              fontSize: 'inherit',
-              textAlign: 'center',
-              outline: 'none',
-              padding: 0
-            }}
-            placeholder="0"
-          /> 
-          min
-        </span>
-      </div>
-
-      {/* Delete Button (Bottom Left) */}
-      <button 
-        onClick={() => onDelete(task.id)}
-        style={{ position: 'absolute', bottom: '8px', left: '8px', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px', borderRadius: '4px', opacity: 0.6, transition: 'opacity 0.2s' }}
-        title="Task löschen"
-        onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-        onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="3 6 5 6 21 6"></polyline>
-          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-        </svg>
-      </button>
     </div>
   );
 }
