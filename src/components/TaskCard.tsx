@@ -123,6 +123,7 @@ export function TaskCard({ task, onToggle, onDelete, onUpdate }: TaskCardProps) 
             style={{ fontWeight: 600, color: 'var(--primary)', fontSize: '0.85rem', background: 'transparent', border: 'none', width: '42px', outline: 'none', flexShrink: 0, padding: 0 }}
             placeholder="00:00"
           />
+          <span style={{ opacity: 0.5, fontWeight: 'bold', fontSize: '0.85rem' }}>{task.id} - </span>
           <input 
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -188,7 +189,8 @@ export function TaskCard({ task, onToggle, onDelete, onUpdate }: TaskCardProps) 
           </div>
 
           {/* Middle Row: Full width Title */}
-          <div style={{ width: '100%' }}>
+          <div style={{ width: '100%', display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
+            <span style={{ opacity: 0.5, fontWeight: 'bold', fontSize: '0.9rem', marginTop: '3px' }}>{task.id} - </span>
             <textarea 
               ref={textareaRef}
               value={title}

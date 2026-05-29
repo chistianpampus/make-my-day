@@ -21,6 +21,7 @@ import { Task } from '../types';
 import { DroppableContainer } from './DroppableContainer';
 import { SortableTaskItem } from './SortableTaskItem';
 import { TaskCard } from './TaskCard';
+import { SchedulingCopilot } from './SchedulingCopilot';
 
 interface TodayViewProps {
   tasks: Task[];
@@ -35,12 +36,8 @@ export function TodayView({ tasks, onTaskUpdate, onToggle, onDelete, processingC
   const [activeTargetContainerId, setActiveTargetContainerId] = React.useState<string | null>(null);
   
   const [schedule, setSchedule] = React.useState<any[]>([]);
-  const [isScheduling, setIsScheduling] = React.useState(false);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  );
+  const [previewSchedule, setPreviewSchedule] = React.useState<any[] | null>(null);
+  const [isCopilotOpen, setIsCopilotOpen] = React.useState(false);
 
   const today = startOfToday();
   const tomorrowStr = format(addDays(today, 1), 'yyyy-MM-dd');
@@ -48,39 +45,62 @@ export function TodayView({ tasks, onTaskUpdate, onToggle, onDelete, processingC
   const day3Str = format(addDays(today, 3), 'yyyy-MM-dd');
   const todayStr = format(today, 'yyyy-MM-dd');
 
+  // Load saved schedule on mount
+  React.useEffect(() => {
+    fetch(`/api/schedule?date=${todayStr}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.schedule) setSchedule(data.schedule);
+      })
+      .catch(console.error);
+  }, [todayStr]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
   // Filter tasks for today
   const todayTasks = useMemo(() => 
     tasks.filter(t => {
       const isImplicitlyToday = !t.scheduledDate && t.scheduledStartTime !== null;
       const isExplicitlyTodayOrPast = t.scheduledDate && t.scheduledDate <= todayStr && t.scheduledDate !== 'later';
       return isExplicitlyTodayOrPast || isImplicitlyToday;
+    }).sort((a, b) => {
+      if (a.scheduledStartTime && !b.scheduledStartTime) return -1;
+      if (!a.scheduledStartTime && b.scheduledStartTime) return 1;
+      if (a.scheduledStartTime && b.scheduledStartTime) {
+        return a.scheduledStartTime.localeCompare(b.scheduledStartTime);
+      }
+      return a.id - b.id;
     }),
   [tasks, todayStr]);
 
   const activeTask = useMemo(() => tasks.find((t) => t.id === activeId), [activeId, tasks]);
 
-  const generateSchedule = async () => {
-    setIsScheduling(true);
+  const saveSchedule = async () => {
+    if (!previewSchedule) return;
     try {
-      const routinesRes = await fetch('/api/routines');
-      const routines = await routinesRes.json();
-      
-      const schedRes = await fetch('/api/generate-schedule', {
+      const res = await fetch('/api/schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tasks: todayTasks, routines, targetDate: todayStr })
+        body: JSON.stringify({ date: todayStr, schedule: previewSchedule })
       });
-      
-      if (!schedRes.ok) throw new Error('Failed to generate schedule');
-      const data = await schedRes.json();
-      setSchedule(data.schedule);
+      if (res.ok) {
+        setSchedule(previewSchedule);
+        setPreviewSchedule(null);
+        window.location.reload(); // Reload to sync updated task times from DB
+      }
     } catch (error) {
       console.error(error);
-      alert('Failed to generate schedule');
-    } finally {
-      setIsScheduling(false);
+      alert('Failed to save schedule');
     }
   };
+
+  const currentScheduleToRender = previewSchedule || schedule;
+  const unscheduledTasks = currentScheduleToRender.length > 0 
+    ? todayTasks.filter(t => !currentScheduleToRender.find((item: any) => item.type === 'task' && item.referenceId === t.id))
+    : [];
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(parseInt(event.active.id as string, 10));
@@ -162,20 +182,31 @@ export function TodayView({ tasks, onTaskUpdate, onToggle, onDelete, processingC
     if (item.type === 'task') {
       const task = todayTasks.find(t => t.id === item.referenceId);
       if (!task) return null;
+
+      let durationMinutes: number | null = null;
+      if (item.startTime && item.endTime) {
+        const [sh, sm] = item.startTime.split(':').map(Number);
+        const [eh, em] = item.endTime.split(':').map(Number);
+        if (!isNaN(sh) && !isNaN(eh)) {
+          const diff = (eh * 60 + em) - (sh * 60 + sm);
+          if (diff > 0) durationMinutes = diff;
+        }
+      }
+
+      const displayTask = {
+        ...task,
+        scheduledStartTime: item.startTime,
+        estimatedDuration: durationMinutes ?? task.estimatedDuration
+      };
+
       return (
-        <div key={`sched-task-${item.referenceId}-${index}`} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <div style={{ minWidth: '45px', fontSize: '0.8rem', opacity: 0.7, textAlign: 'right' }}>
-            {item.startTime}
-          </div>
-          <div style={{ flexGrow: 1 }}>
-            <SortableTaskItem 
-              task={task} 
-              onToggle={onToggle} 
-              onDelete={onDelete} 
-              onUpdate={onTaskUpdate}
-            />
-          </div>
-        </div>
+        <SortableTaskItem 
+          key={`sched-task-${item.referenceId}-${index}`}
+          task={displayTask} 
+          onToggle={onToggle} 
+          onDelete={onDelete} 
+          onUpdate={onTaskUpdate}
+        />
       );
     } else if (item.type === 'routine') {
       return (
@@ -224,8 +255,7 @@ export function TodayView({ tasks, onTaskUpdate, onToggle, onDelete, processingC
             isHighlighted={activeTargetContainerId === 'container-today'}
             headerRight={
               <button 
-                onClick={generateSchedule}
-                disabled={isScheduling || todayTasks.length === 0}
+                onClick={() => setIsCopilotOpen(true)}
                 style={{
                   background: 'var(--primary)',
                   color: 'white',
@@ -234,11 +264,10 @@ export function TodayView({ tasks, onTaskUpdate, onToggle, onDelete, processingC
                   borderRadius: '12px',
                   fontSize: '0.8rem',
                   fontWeight: 'bold',
-                  cursor: (isScheduling || todayTasks.length === 0) ? 'not-allowed' : 'pointer',
-                  opacity: (isScheduling || todayTasks.length === 0) ? 0.5 : 1
+                  cursor: 'pointer'
                 }}
               >
-                {isScheduling ? 'Optimizing...' : 'Optimize 🪄'}
+                Optimize 🪄
               </button>
             }
           >
@@ -247,20 +276,40 @@ export function TodayView({ tasks, onTaskUpdate, onToggle, onDelete, processingC
               items={todayTasks.map(t => t.id.toString())} 
               strategy={verticalListSortingStrategy}
             >
-              {schedule.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {schedule.map((item, i) => renderScheduleItem(item, i))}
-                </div>
+              {currentScheduleToRender.length > 0 ? (
+                <>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {currentScheduleToRender.map((item, i) => renderScheduleItem(item, i))}
+                  </div>
+                  {unscheduledTasks.length > 0 && (
+                    <div style={{ marginTop: '24px' }}>
+                      <h4 style={{ opacity: 0.5, borderBottom: '1px solid currentColor', paddingBottom: '4px', marginBottom: '8px' }}>Unscheduled Tasks</h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {unscheduledTasks.map(task => (
+                          <SortableTaskItem 
+                            key={task.id} 
+                            task={task} 
+                            onToggle={onToggle} 
+                            onDelete={onDelete} 
+                            onUpdate={onTaskUpdate}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
               ) : (
-                todayTasks.map(task => (
-                  <SortableTaskItem 
-                    key={task.id} 
-                    task={task} 
-                    onToggle={onToggle} 
-                    onDelete={onDelete} 
-                    onUpdate={onTaskUpdate}
-                  />
-                ))
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {todayTasks.map(task => (
+                    <SortableTaskItem 
+                      key={task.id} 
+                      task={task} 
+                      onToggle={onToggle} 
+                      onDelete={onDelete} 
+                      onUpdate={onTaskUpdate}
+                    />
+                  ))}
+                </div>
               )}
             </SortableContext>
           </DroppableContainer>
@@ -311,6 +360,18 @@ export function TodayView({ tasks, onTaskUpdate, onToggle, onDelete, processingC
           />
         ) : null}
       </DragOverlay>
+
+      <SchedulingCopilot 
+        isOpen={isCopilotOpen}
+        onClose={() => {
+          setIsCopilotOpen(false);
+          setPreviewSchedule(null);
+        }}
+        tasks={todayTasks}
+        targetDate={todayStr}
+        onPreviewSchedule={setPreviewSchedule}
+        onSaveSchedule={saveSchedule}
+      />
     </DndContext>
   );
 }

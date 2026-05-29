@@ -38,29 +38,101 @@ Based on the functional requirements and the decisions made, the project will be
    - Open tasks from the **backlog**.
 6. The optimized daily plan is immediately updated and clearly displayed in the PWA.
 
-### Graphical System Flow
+### Component Block Diagram
 
+```mermaid
+flowchart TD
+    subgraph Frontend [Next.js PWA Client]
+        UI[React UI Components]
+        Speech[Web Speech API Hook]
+        Dnd[DnD Kit Drag & Drop]
+        Copilot[Scheduling Copilot UI]
+    end
+
+    subgraph Backend [Next.js API Routes]
+        API_Parse[POST /api/parse-task]
+        API_Tasks[GET/POST /api/tasks]
+        API_Sched[GET/POST /api/schedule]
+        API_Gen[POST /api/generate-schedule]
+    end
+
+    subgraph External [External Services]
+        LLM[OpenAI API GPT-4o-mini]
+        GC[Google Calendar - Future]
+    end
+
+    subgraph Storage [Database]
+        DB[(SQLite via Prisma)]
+    end
+
+    %% Connections
+    UI <--> API_Tasks
+    UI <--> API_Sched
+    Speech --> API_Parse
+    Dnd --> API_Tasks
+    Copilot <--> API_Gen
+    Copilot --> API_Sched
+
+    API_Parse <--> LLM
+    API_Gen <--> LLM
+    
+    API_Tasks <--> DB
+    API_Sched <--> DB
+    
+    API_Gen -.-> GC
+```
+
+### Sequence Diagrams for Key Operations
+
+#### 1. Voice Task Capture & Parsing
 ```mermaid
 sequenceDiagram
     autonumber
     participant User
-    participant PWA as PWA (Next.js)
-    participant Speech as Web Speech API
-    participant Backend as Cloud Backend
-    participant LLM as Cloud LLM
-    participant DB as Cloud Database
-    participant GC as Google Calendar
+    participant UI as PWA (Header/Voice)
+    participant API as /api/parse-task
+    participant LLM as OpenAI (GPT)
+    participant DB as SQLite DB
 
-    User->>PWA: Taps Microphone & Speaks
-    PWA->>Speech: Start Voice Recognition
-    Speech-->>PWA: Returns Recognized Text String
-    PWA->>Backend: Sends Text via API
-    Backend->>LLM: Analyzes Text for Intent & Timeframe
-    LLM-->>Backend: Returns Structured Task Object
-    Backend->>DB: Saves New Task to Backlog
-    Backend->>DB: Fetches User Routines & Premises
-    Backend->>GC: Fetches Fixed Appointments
-    Backend->>Backend: Generates Optimized Daily Plan
-    Backend-->>PWA: Returns Updated Daily Plan
-    PWA-->>User: Displays New Schedule
+    User->>UI: Taps Mic & Speaks (e.g., "Mow lawn tomorrow")
+    UI->>UI: Web Speech API transcribes
+    UI->>API: POST transcribed text
+    API->>LLM: Analyze text for intent & timeframe
+    LLM-->>API: Structured JSON (Title, Date, Constraints)
+    API->>DB: Prisma create Task
+    API-->>UI: Returns created Task
+    UI-->>User: UI updates with new Task
+```
+
+#### 2. Conversational Scheduling Copilot (Optimization)
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User
+    participant Copilot as Scheduling Copilot UI
+    participant GenAPI as /api/generate-schedule
+    participant LLM as OpenAI (GPT)
+    participant SchedAPI as /api/schedule
+    participant DB as SQLite DB
+
+    User->>Copilot: Clicks "Optimize" & optionally speaks hint
+    Copilot->>GenAPI: POST Tasks, Routines, Chat History
+    GenAPI->>LLM: Generate timeline / Evaluate hints
+    LLM-->>GenAPI: Proposed Schedule OR Clarifying Question
+    GenAPI-->>Copilot: Render Schedule / Question in UI
+    
+    alt User provides more hints
+        User->>Copilot: Types/Speaks adjustment
+        Copilot->>GenAPI: POST updated Chat History
+        GenAPI->>LLM: Re-evaluate
+        LLM-->>GenAPI: Updated Schedule
+        GenAPI-->>Copilot: Render new Schedule
+    end
+
+    User->>Copilot: Clicks "Save Schedule"
+    Copilot->>SchedAPI: POST approved schedule blocks
+    SchedAPI->>DB: Bulk Update Tasks (Start Times)
+    SchedAPI->>DB: Upsert DailySchedule Blob
+    SchedAPI-->>Copilot: Success
+    Copilot-->>User: UI reloads with final timeline
 ```

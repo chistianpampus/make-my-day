@@ -32,10 +32,10 @@ ${tasksContext}
 1. Fix any grammar, capitalization, and punctuation.
 2. CRITICAL: Do NOT translate the task. Output the title in the exact same language the user spoke it.
 3. Keep the title concise and action-oriented.
-4. Extract any free-text time constraints or specific times the user mentions into the 'timeConstraint' field (e.g., "am Nachmittag", "after lunch", "exactly at 11:00"). CRITICAL: Strip out any day references like "heute" or "morgen" from this string! For example, if the user says "heute am Vormittag", this field must be strictly "am Vormittag". If no constraints are mentioned, set it to null.
+4. Extract any free-text time constraints or specific times the user mentions into the 'timeConstraint' field (e.g., "am Nachmittag", "after lunch", "exactly at 11:00", "um 14:30"). CRITICAL: Strip out any day references like "heute" or "morgen" from this string! For example, if the user says "heute am Vormittag", this field must be strictly "am Vormittag". If no constraints are mentioned, set it to null.
 5. Determine priority ("High", "Medium", "Low") based on the urgency of the user's voice command.
 6. Estimate the duration of the task in minutes (estimatedDuration: number). If the user specifies a duration, use it. Otherwise, estimate it based on typical values for such a task.
-8. If the task is scheduled for a specific day, provide a 'scheduledDate' in YYYY-MM-DD format based on the current date/time context. If the task is for today/heute, use today's date. If it's for 'tomorrow'/'morgen', use tomorrow's date. If a weekday like 'Freitag' is mentioned, calculate its YYYY-MM-DD date. If it's unscheduled, set 'scheduledDate' to null.
+7. If the task is scheduled for a specific day, provide a 'scheduledDate' in YYYY-MM-DD format based on the current date/time context. If the task is for today/heute, use today's date. If it's for 'tomorrow'/'morgen', use tomorrow's date. If a weekday like 'Freitag' is mentioned, calculate its YYYY-MM-DD date. If it's unscheduled, set 'scheduledDate' to null.
 
 Decide if the user wants to CREATE new tasks, or UPDATE existing ones from the 'Current Tasks' list.
 Output strict JSON matching this schema:

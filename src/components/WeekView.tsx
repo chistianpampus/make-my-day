@@ -64,6 +64,13 @@ export function WeekView({ tasks: initialTasks, onTaskUpdate, onToggle, onDelete
         return t.scheduledDate > day3Str;
       }
       return t.scheduledDate === dateStr;
+    }).sort((a, b) => {
+      if (a.scheduledStartTime && !b.scheduledStartTime) return -1;
+      if (!a.scheduledStartTime && b.scheduledStartTime) return 1;
+      if (a.scheduledStartTime && b.scheduledStartTime) {
+        return a.scheduledStartTime.localeCompare(b.scheduledStartTime);
+      }
+      return a.id - b.id;
     });
   };
 
