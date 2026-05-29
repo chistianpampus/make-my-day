@@ -13,13 +13,15 @@ datasource db {
 }
 
 model Task {
-  id         Int      @id @default(autoincrement())
-  title      String
-  timeframe  String
-  priority   String   @default("Medium") // High, Medium, Low
-  isFlexible Boolean  @default(true)     // true = flexible, false = strict
-  completed  Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  id                Int      @id @default(autoincrement())
+  title             String
+  timeframe         String
+  priority          String   @default("Medium") // High, Medium, Low
+  isFlexible        Boolean  @default(true)     // true = flexible, false = strict
+  completed         Boolean  @default(false)
+  estimatedDuration Int?     // Duration in minutes
+  scheduledDate     String?  // YYYY-MM-DD or null for 'Later'
+  createdAt         DateTime @default(now())
 }
 
 model Routine {

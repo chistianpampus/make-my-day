@@ -34,9 +34,17 @@ main {
   min-height: 100vh;
   padding: 1.5rem;
   max-width: 600px;
+  width: 100%;
   margin: 0 auto;
   position: relative;
   padding-bottom: 120px; /* Space for the floating button */
+}
+
+@media (min-width: 1024px) {
+  main {
+    max-width: 100%;
+    padding: 2rem;
+  }
 }
 
 .header {

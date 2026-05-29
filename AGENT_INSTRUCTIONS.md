@@ -13,7 +13,8 @@ Development is divided into sprints. Agents work as follows:
 2. Strictly execute the tasks defined there.
 3. **Project Tickets Requirement:** At the beginning of every sprint, before starting development, the agent MUST automatically create GitHub issues (tickets) for all tasks in the sprint and add them to the GitHub Project board.
 4. When you complete a task, you must update the markdown file and mark the task as done (`[x]`).
-5. Push working intermediate states to the GitHub repository.
+5. **Requirements Tracking Requirement:** Whenever the user provides new requirements or changes existing ones, the agent MUST immediately record them in `docs/requirements.md`.
+6. Push working intermediate states to the GitHub repository.
 
 ## 3. Coding Conventions & Design
 - **Mobile First:** The UI must primarily be developed for small smartphone screens. Large clickable areas, simple menus.

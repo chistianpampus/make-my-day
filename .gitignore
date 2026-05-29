@@ -19,3 +19,8 @@ yarn-debug.log*
 yarn-error.log*
 
 /src/generated/prisma
+
+# database
+*.db
+*.sqlite
+*.sqlite3

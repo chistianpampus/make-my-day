@@ -1,17 +1,12 @@
 "use client";
 
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
-import { useEffect, useState, useRef } from 'react';
-
-type Task = {
-  id: number;
-  title: string;
-  timeframe: string;
-  priority: string;
-  isFlexible: boolean;
-  completed: boolean;
-  createdAt: string;
-};
+import { useTasks } from '../hooks/useTasks';
+import { TodayView } from '../components/TodayView';
+import { WeekView } from '../components/WeekView';
+import { TaskInput } from '../components/TaskInput';
+import { useEffect, useRef, useState } from 'react';
+import { Task } from '../types';
 
 export default function Home() {
   const {
@@ -24,34 +19,36 @@ export default function Home() {
     isSupported
   } = useSpeechRecognition();
 
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const { tasks, isLoadingTasks, toggleTaskCompletion, updateTask, deleteTask, addTask } = useTasks({});
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isLoadingTasks, setIsLoadingTasks] = useState(true);
+  const [isLargeScreen, setIsLargeScreen] = useState(false);
+  const [activeView, setActiveView] = useState<'today' | 'week'>('today');
+
+  useEffect(() => {
+    const checkScreenSize = () => {
+      const large = window.innerWidth >= 1024;
+      setIsLargeScreen(large);
+      // Auto-switch based on breakpoint if we just loaded
+      if (!window.sessionStorage.getItem('view_preference')) {
+        setActiveView(large ? 'week' : 'today');
+      }
+    };
+    
+    checkScreenSize();
+    
+    // Add listener
+    window.addEventListener('resize', checkScreenSize);
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
   
   const lastProcessedTranscript = useRef<string>('');
-
-  // Fetch tasks on initial load
-  useEffect(() => {
-    fetchTasks();
-  }, []);
-
-  const fetchTasks = async () => {
-    try {
-      const res = await fetch('/api/tasks?excludeTimeframe=Unscheduled');
-      const data = await res.json();
-      setTasks(data);
-    } catch (err) {
-      console.error('Failed to fetch tasks', err);
-    } finally {
-      setIsLoadingTasks(false);
-    }
-  };
 
   useEffect(() => {
     if (!isListening && transcript && transcript !== lastProcessedTranscript.current) {
       lastProcessedTranscript.current = transcript;
       processTranscript(transcript);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isListening, transcript]);
 
   const processTranscript = async (text: string) => {
@@ -60,16 +57,29 @@ export default function Home() {
       const response = await fetch('/api/parse-task', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transcript: text }),
+        body: JSON.stringify({ 
+          transcript: text,
+          currentTime: new Date().toLocaleString(),
+          existingTasks: tasks
+        }),
       });
 
       if (!response.ok) {
         throw new Error('Failed to parse task');
       }
 
-      const newTask: Task = await response.json();
-      // Add the new task to the top of the list
-      setTasks((prev) => [newTask, ...prev]);
+      const data = await response.json();
+      
+      if (data.created && Array.isArray(data.created)) {
+        data.created.forEach((task: Task) => addTask(task));
+      }
+      
+      if (data.updated && Array.isArray(data.updated)) {
+        // useTasks hook will be updated or we can just refetch tasks to be safe, 
+        // but updateTask does a local state update if we pass the partial data. 
+        // Since we already have the full updated task from backend, we can just use that.
+        data.updated.forEach((task: Task) => updateTask(task.id, task));
+      }
     } catch (err) {
       console.error(err);
       alert("Failed to process task via AI. Please try again.");
@@ -78,36 +88,12 @@ export default function Home() {
     }
   };
 
-  const toggleTaskCompletion = async (id: number, currentStatus: boolean) => {
-    // Optimistic UI update
-    setTasks(tasks.map(t => t.id === id ? { ...t, completed: !currentStatus } : t));
-    
-    try {
-      await fetch(`/api/tasks/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ completed: !currentStatus })
-      });
-    } catch (err) {
-      console.error('Failed to update task', err);
-      // Revert on failure
-      setTasks(tasks.map(t => t.id === id ? { ...t, completed: currentStatus } : t));
-    }
-  };
-
-  const deleteTask = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this task?")) return;
-    
-    // Optimistic UI update
-    setTasks(tasks.filter(t => t.id !== id));
-    
-    try {
-      await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
-    } catch (err) {
-      console.error('Failed to delete task', err);
-      fetchTasks(); // Re-fetch to restore state
-    }
-  };
+  const processingContent = isProcessing ? (
+    <div className="task" style={{ opacity: 0.5, borderLeft: '4px solid #64748b' }}>
+      <span className="time">...</span>
+      <span className="title">Processing: "{transcript.trim()}"</span>
+    </div>
+  ) : null;
 
   return (
     <main>
@@ -117,69 +103,46 @@ export default function Home() {
       </header>
 
       <nav className="nav-tabs">
-        <a href="/" className="nav-tab active">Today</a>
+        <button 
+          onClick={() => { setActiveView('today'); window.sessionStorage.setItem('view_preference', 'today'); }} 
+          className={`nav-tab ${activeView === 'today' ? 'active' : ''}`}
+          style={{ cursor: 'pointer', fontSize: '1rem', fontFamily: 'inherit' }}
+        >
+          Today
+        </button>
+        <button 
+          onClick={() => { setActiveView('week'); window.sessionStorage.setItem('view_preference', 'week'); }} 
+          className={`nav-tab ${activeView === 'week' ? 'active' : ''}`}
+          style={{ cursor: 'pointer', fontSize: '1rem', fontFamily: 'inherit' }}
+        >
+          Week
+        </button>
         <a href="/backlog" className="nav-tab">Backlog</a>
       </nav>
 
-      <section className="glass-panel schedule-container">
-        
-        {isLoadingTasks ? (
-          <p style={{ textAlign: 'center', opacity: 0.7 }}>Loading tasks...</p>
-        ) : tasks.length === 0 ? (
-          <p style={{ textAlign: 'center', opacity: 0.7 }}>Your day is clear! Tap the microphone to add a task.</p>
-        ) : null}
+      <div style={{ padding: '0 1rem' }}>
+        <TaskInput onProcessText={processTranscript} isProcessing={isProcessing} />
+      </div>
 
-        {/* Display raw transcript briefly while processing */}
-        {isProcessing && (
-          <div className="task" style={{ opacity: 0.5, borderLeft: '4px solid #64748b' }}>
-            <span className="time">...</span>
-            <span className="title">Processing: "{transcript.trim()}"</span>
-          </div>
-        )}
-        
-        {/* Render Real Database Tasks */}
-        {tasks.map((task) => (
-          <div 
-            key={task.id} 
-            className={`task ${task.completed ? 'completed' : ''}`}
-            style={{ 
-              borderLeft: `4px solid ${task.priority === 'High' ? '#ef4444' : task.priority === 'Medium' ? '#f59e0b' : '#3b82f6'}`, 
-              background: task.completed ? 'rgba(0,0,0,0.05)' : 'var(--surface)',
-              opacity: task.completed ? 0.6 : 1
-            }}
-          >
-            <div style={{ display: 'flex', flexDirection: 'column', minWidth: '80px' }}>
-              <span className="time" style={{ color: 'var(--foreground)', fontSize: '0.9rem' }}>{task.timeframe}</span>
-              <span style={{ fontSize: '0.7rem', opacity: 0.6 }}>{task.isFlexible ? 'Flexible' : 'Strict'}</span>
-            </div>
-            
-            <span className="title" style={{ flexGrow: 1, textDecoration: task.completed ? 'line-through' : 'none' }}>
-              {task.title}
-            </span>
-
-            <div className="task-actions" style={{ display: 'flex', gap: '10px' }}>
-              <input 
-                type="checkbox" 
-                checked={task.completed} 
-                onChange={() => toggleTaskCompletion(task.id, task.completed)} 
-                style={{ width: '20px', height: '20px', cursor: 'pointer' }}
-                aria-label="Mark completed"
-              />
-              <button 
-                onClick={() => deleteTask(task.id)}
-                style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}
-                aria-label="Delete task"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 6h18"></path>
-                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                </svg>
-              </button>
-            </div>
-          </div>
-        ))}
-      </section>
+      {isLoadingTasks ? (
+        <p style={{ textAlign: 'center', opacity: 0.7, padding: '2rem' }}>Loading tasks...</p>
+      ) : activeView === 'week' ? (
+        <WeekView 
+          tasks={tasks}
+          onToggle={toggleTaskCompletion}
+          onDelete={deleteTask}
+          onTaskUpdate={updateTask}
+          processingContent={processingContent}
+        />
+      ) : (
+        <TodayView 
+          tasks={tasks}
+          onToggle={toggleTaskCompletion}
+          onDelete={deleteTask}
+          onTaskUpdate={updateTask}
+          processingContent={processingContent}
+        />
+      )}
 
       {/* Floating Transcript Bubble */}
       {(isListening || isProcessing || error) && (
@@ -200,7 +163,6 @@ export default function Home() {
           <button 
             className="secondary-action-button restart-button"
             onClick={() => {
-              // Set the current transcript as the 'lastProcessed' so the useEffect ignores it and doesn't send it to the AI
               lastProcessedTranscript.current = transcript; 
               restartListening();
             }}
