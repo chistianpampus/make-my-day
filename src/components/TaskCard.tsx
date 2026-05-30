@@ -157,21 +157,45 @@ export function TaskCard({ task, onToggle, onDelete, onUpdate }: TaskCardProps) 
                 aria-label="Mark completed"
               />
               <input 
+                type="time"
                 value={scheduledStartTime}
                 onChange={(e) => setScheduledStartTime(e.target.value)}
                 onBlur={() => {
-                  handleUpdate('scheduledStartTime', scheduledStartTime.trim() === '' ? null : scheduledStartTime);
+                  let newTime = scheduledStartTime.trim() === '' ? null : scheduledStartTime;
+                  
+                  if (newTime) {
+                    const now = new Date();
+                    const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                    const isToday = !task.scheduledDate || task.scheduledDate === todayStr;
+                    
+                    if (isToday) {
+                      const [hours, mins] = newTime.split(':').map(Number);
+                      const currentHours = now.getHours();
+                      const currentMins = now.getMinutes();
+                      
+                      if (hours < currentHours || (hours === currentHours && mins < currentMins)) {
+                        alert('Die eingegebene Zeit liegt in der Vergangenheit!');
+                        newTime = task.scheduledStartTime;
+                        setScheduledStartTime(newTime || '');
+                        return; // Abort update
+                      }
+                    }
+                  }
+
+                  if (newTime !== task.scheduledStartTime) {
+                    handleUpdate('scheduledStartTime', newTime);
+                  }
                 }}
                 onKeyDown={handleKeyDown}
                 style={{ 
                   fontWeight: 600, 
-                  color: 'var(--primary)', 
+                  color: task.isLocked ? '#eab308' : 'var(--primary)', // Yellow if locked
                   fontSize: '0.95rem',
                   background: 'transparent',
-                  border: '1px solid transparent',
+                  border: task.isLocked ? '1px dashed #eab308' : '1px solid transparent',
                   borderRadius: '4px',
                   padding: '2px 4px',
-                  width: '80px',
+                  width: '90px',
                   outline: 'none'
                 }}
                 placeholder="00:00"
@@ -180,6 +204,14 @@ export function TaskCard({ task, onToggle, onDelete, onUpdate }: TaskCardProps) 
             </div>
 
             <div className="task-actions-compact" style={{ display: 'flex', gap: '4px', opacity: 0.7 }}>
+              <button 
+                onClick={(e) => { e.stopPropagation(); handleUpdate('isLocked', !task.isLocked); }}
+                onPointerDown={(e) => e.stopPropagation()}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '4px', opacity: task.isLocked ? 1 : 0.4 }}
+                title={task.isLocked ? "Entsperren" : "Zeit fixieren"}
+              >
+                {task.isLocked ? '🔒' : '🔓'}
+              </button>
               <button 
                 onClick={(e) => { e.stopPropagation(); setIsAIEditOpen(!isAIEditOpen); }}
                 onPointerDown={(e) => e.stopPropagation()}

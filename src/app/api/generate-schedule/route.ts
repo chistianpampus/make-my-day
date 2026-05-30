@@ -20,7 +20,8 @@ export async function POST(request: Request) {
           timeConstraint: t.timeConstraint,
           scheduledStartTime: t.scheduledStartTime,
           priority: t.priority, 
-          estimatedDuration: t.estimatedDuration 
+          estimatedDuration: t.estimatedDuration,
+          isLocked: t.isLocked
         })))
       : '[]';
 
@@ -51,9 +52,11 @@ Rules:
 4. If the user provides a hint or request (e.g. "I want to finish by 16:00"), adjust the schedule accordingly.
 5. If you can fulfill the user's request, provide the proposed schedule in the "schedule" array and optionally a "messageToUser" explaining what you did.
 6. If the user's request is impossible (e.g. 10 hours of tasks but they want to leave at 12:00), ask them a clarifying question via "messageToUser" and leave the "schedule" array empty.
-7. STRICT TIME CONSTRAINTS: If a task has a specific 'scheduledStartTime' or a rigid 'timeConstraint' (e.g. 'um 17:45'), treat it as a HARD constraint. You MUST NOT shift it unless absolutely impossible. Instead of shifting strict tasks, reduce the 'estimatedDuration' of earlier, more flexible tasks to make the timeline fit.
+7. STRICT TIME CONSTRAINTS & LOCKING: 
+   - If a task has 'isLocked': true AND a 'scheduledStartTime', this is a HARD FIXED BLOCK. You MUST NOT change its time. You MUST schedule all other tasks and routines AROUND it, ensuring no overlap.
+   - If a task has a specific 'scheduledStartTime' or a rigid 'timeConstraint' (e.g. 'um 17:45'), treat it as a HARD constraint. Instead of shifting strict tasks, reduce the 'estimatedDuration' of earlier, more flexible tasks to make the timeline fit.
 8. NO UNSOLICITED ADDITIONS: You MUST NOT invent, hallucinate, or add any new tasks, routines, or events that were not explicitly provided in the 'Input Tasks' or 'Input Routines' arrays. Only schedule what the user gave you (and the break buffers).
-8. If you do provide a schedule:
+9. If you do provide a schedule:
    - Include all routines and tasks.
    - Insert generous 10-15 minute "break" blocks between tasks.
    - Sort strictly chronologically.

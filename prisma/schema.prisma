@@ -20,6 +20,7 @@ model Task {
   scheduledStartTime String?
   priority          String   @default("Medium") // High, Medium, Low
   completed         Boolean  @default(false)
+  isLocked          Boolean  @default(false)
   estimatedDuration Int?     // Duration in minutes
   scheduledDate     String?  // YYYY-MM-DD or null for 'Later'
   createdAt         DateTime @default(now())

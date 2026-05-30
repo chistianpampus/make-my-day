@@ -17,7 +17,7 @@ import {
   arrayMove
 } from '@dnd-kit/sortable';
 import { addDays, format, startOfToday } from 'date-fns';
-import { getWaterfallUpdates } from '../lib/timeUtils';
+import { getWaterfallUpdates, getRoundedCurrentTime } from '../lib/timeUtils';
 
 import { Task } from '../types';
 import { DroppableContainer } from './DroppableContainer';
@@ -60,9 +60,26 @@ export function WeekView({ initialTasks, onTaskUpdate, onDelete, onToggle, proce
   }, [initialTasks]);
 
   const applyWaterfallForDate = async (dateKey: string | null) => {
-    const list = getTasksForDate(dateKey);
+    const list = getTasksForDate(dateKey).filter(t => !t.completed);
     if (list.length === 0) return;
-    const updates = getWaterfallUpdates(list, list);
+
+    let anchorTime = undefined;
+    if (!list[0].scheduledStartTime) {
+      if (dateKey === todayStr) {
+        anchorTime = getRoundedCurrentTime();
+      } else {
+        const userInput = window.prompt("Wann soll der Plan beginnen? (HH:MM)", "08:00");
+        if (userInput === null) return; // cancelled
+        if (/^\d{2}:\d{2}$/.test(userInput)) {
+          anchorTime = userInput;
+        } else {
+          alert("Ungültiges Zeitformat. Breche ab.");
+          return;
+        }
+      }
+    }
+
+    const updates = getWaterfallUpdates(list, list, anchorTime);
     if (updates.length > 0) {
       updates.forEach(u => onTaskUpdate(u.id, u.updates));
       try {
@@ -82,6 +99,30 @@ export function WeekView({ initialTasks, onTaskUpdate, onDelete, onToggle, proce
     setCopilotTasks(getTasksForDate(dateKey));
     setPreviewSchedule(null);
     setIsCopilotOpen(true);
+  };
+
+  const handleClearTimes = async (dateKey: string | null) => {
+    if (!window.confirm("Alle Zeiten für diesen Tag wirklich löschen?")) return;
+    const list = getTasksForDate(dateKey);
+    const updates = list
+      .filter(t => t.scheduledStartTime !== null)
+      .map(t => ({
+        id: t.id,
+        updates: { scheduledStartTime: null, isLocked: false }
+      }));
+      
+    if (updates.length > 0) {
+      updates.forEach(u => onTaskUpdate(u.id, u.updates));
+      try {
+        await fetch('/api/tasks/bulk-update', {
+          method: 'POST',
+          body: JSON.stringify({ updates }),
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (err) {
+        console.error("Bulk update failed", err);
+      }
+    }
   };
 
   const handleSaveSchedule = async () => {
@@ -161,6 +202,49 @@ export function WeekView({ initialTasks, onTaskUpdate, onDelete, onToggle, proce
   const laterTasks = useMemo(() => getTasksForDate(null), [tasks]);
 
   const activeTask = useMemo(() => tasks.find((t) => t.id === activeId), [activeId, tasks]);
+
+  const handleTaskUpdateWithWaterfall = (id: number, updates: Partial<Task>) => {
+    onTaskUpdate(id, updates);
+
+    if (updates.scheduledStartTime !== undefined && updates.scheduledStartTime !== null) {
+      let currentList = todayTasks.filter(t => !t.completed);
+      if (!currentList.find(t => t.id === id)) {
+        currentList = tomorrowTasks.filter(t => !t.completed);
+        if (!currentList.find(t => t.id === id)) {
+          currentList = day2Tasks.filter(t => !t.completed);
+          if (!currentList.find(t => t.id === id)) {
+            currentList = day3Tasks.filter(t => !t.completed);
+          }
+        }
+      }
+
+      const taskIndex = currentList.findIndex(t => t.id === id);
+      if (taskIndex !== -1 && taskIndex < currentList.length - 1) {
+        const { timeToMinutes, minutesToTime } = require('../lib/timeUtils');
+        const taskDuration = updates.estimatedDuration ?? currentList[taskIndex].estimatedDuration ?? 30;
+        let currentMinutes = timeToMinutes(updates.scheduledStartTime) + taskDuration;
+        
+        const subsequentUpdates: { id: number, updates: Partial<Task> }[] = [];
+        for (let i = taskIndex + 1; i < currentList.length; i++) {
+          const t = currentList[i];
+          const newStartTime = minutesToTime(currentMinutes);
+          if (t.scheduledStartTime !== newStartTime) {
+            subsequentUpdates.push({ id: t.id, updates: { scheduledStartTime: newStartTime } });
+          }
+          currentMinutes += (t.estimatedDuration || 30);
+        }
+
+        if (subsequentUpdates.length > 0) {
+          subsequentUpdates.forEach(u => onTaskUpdate(u.id, u.updates));
+          fetch('/api/tasks/bulk-update', {
+            method: 'POST',
+            body: JSON.stringify({ updates: subsequentUpdates }),
+            headers: { 'Content-Type': 'application/json' }
+          }).catch(console.error);
+        }
+      }
+    }
+  };
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(parseInt(event.active.id as string, 10));
@@ -373,6 +457,13 @@ export function WeekView({ initialTasks, onTaskUpdate, onDelete, onToggle, proce
           {dateKey !== null && (
             <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', justifyContent: 'center' }}>
               <button 
+                onClick={() => handleClearTimes(dateKey)}
+                title="Zeiten löschen"
+                style={{ flex: 0.5, padding: '4px 8px', fontSize: '0.8rem', background: 'var(--surface-border)', border: 'none', borderRadius: '4px', cursor: 'pointer', color: 'var(--foreground)' }}
+              >
+                ❌ Zeiten
+              </button>
+              <button 
                 onClick={() => applyWaterfallForDate(dateKey)}
                 title="Wasserfall (Zeiten skriptbasiert berechnen)"
                 style={{ flex: 1, padding: '4px 8px', fontSize: '0.8rem', background: 'var(--surface-border)', border: 'none', borderRadius: '4px', cursor: 'pointer', color: 'var(--foreground)' }}
@@ -413,7 +504,7 @@ export function WeekView({ initialTasks, onTaskUpdate, onDelete, onToggle, proce
                       task={task} 
                       onToggle={onToggle} 
                       onDelete={onDelete} 
-                      onUpdate={onTaskUpdate}
+                      onUpdate={handleTaskUpdateWithWaterfall}
                     />
                   ))}
                 </div>

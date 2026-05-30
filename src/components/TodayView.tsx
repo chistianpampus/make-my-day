@@ -141,6 +141,66 @@ export function TodayView({ tasks, onTaskUpdate, onToggle, onDelete, processingC
     return activeTodayTasks.filter(t => !t.scheduledStartTime);
   }, [currentScheduleToRender, previewSchedule, activeTodayTasks]);
 
+  const handleClearTimes = async (tasksList: Task[]) => {
+    if (!window.confirm("Alle Zeiten für diesen Tag wirklich löschen?")) return;
+    const updates = tasksList
+      .filter(t => t.scheduledStartTime !== null)
+      .map(t => ({
+        id: t.id,
+        updates: { scheduledStartTime: null, isLocked: false }
+      }));
+      
+    if (updates.length > 0) {
+      updates.forEach(u => onTaskUpdate(u.id, u.updates));
+      try {
+        await fetch('/api/tasks/bulk-update', {
+          method: 'POST',
+          body: JSON.stringify({ updates }),
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (err) {
+        console.error("Failed to clear times", err);
+      }
+    }
+  };
+
+  const handleTaskUpdateWithWaterfall = (id: number, updates: Partial<Task>) => {
+    onTaskUpdate(id, updates);
+
+    // If the user manually set a time, waterfall the tasks AFTER this one in the active list
+    if (updates.scheduledStartTime !== undefined && updates.scheduledStartTime !== null) {
+      const currentList = activeTodayTasks;
+      const taskIndex = currentList.findIndex(t => t.id === id);
+      if (taskIndex !== -1 && taskIndex < currentList.length - 1) {
+        const { timeToMinutes, minutesToTime } = require('../lib/timeUtils');
+        const taskDuration = updates.estimatedDuration ?? currentList[taskIndex].estimatedDuration ?? 30;
+        let currentMinutes = timeToMinutes(updates.scheduledStartTime) + taskDuration;
+        
+        const subsequentUpdates: { id: number, updates: Partial<Task> }[] = [];
+        for (let i = taskIndex + 1; i < currentList.length; i++) {
+          const t = currentList[i];
+          const newStartTime = minutesToTime(currentMinutes);
+          if (t.scheduledStartTime !== newStartTime) {
+            subsequentUpdates.push({ id: t.id, updates: { scheduledStartTime: newStartTime } });
+          }
+          currentMinutes += (t.estimatedDuration || 30);
+        }
+
+        if (subsequentUpdates.length > 0) {
+          // Optimistically update the UI
+          subsequentUpdates.forEach(u => onTaskUpdate(u.id, u.updates));
+          
+          // Fire API call to bulk update
+          fetch('/api/tasks/bulk-update', {
+            method: 'POST',
+            body: JSON.stringify({ updates: subsequentUpdates }),
+            headers: { 'Content-Type': 'application/json' }
+          }).catch(console.error);
+        }
+      }
+    }
+  };
+
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(parseInt(event.active.id as string, 10));
   };
@@ -356,24 +416,62 @@ export function TodayView({ tasks, onTaskUpdate, onToggle, onDelete, processingC
             emptyText="No tasks for today. Add one or drag from elsewhere!"
             isDropZoneOnly={false}
             isHighlighted={activeTargetContainerId === 'container-today'}
-            headerRight={
+          >
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', justifyContent: 'center' }}>
+              <button 
+                onClick={() => handleClearTimes(activeTodayTasks)}
+                title="Zeiten löschen"
+                style={{ flex: 0.5, padding: '8px', fontSize: '0.9rem', background: 'var(--surface-border)', border: 'none', borderRadius: '8px', cursor: 'pointer', color: 'var(--foreground)' }}
+              >
+                ❌ Zeiten
+              </button>
+              <button 
+                onClick={() => {
+                  const list = activeTodayTasks;
+                  if (list.length === 0) return;
+                  const { getWaterfallUpdates, getRoundedCurrentTime } = require('../lib/timeUtils');
+                  
+                  let anchorTime = undefined;
+                  if (!list[0].scheduledStartTime) {
+                    anchorTime = getRoundedCurrentTime();
+                  }
+
+                  const updates = getWaterfallUpdates(list, list, anchorTime);
+                  if (updates.length > 0) {
+                    updates.forEach((u: any) => onTaskUpdate(u.id, u.updates));
+                    fetch('/api/tasks/bulk-update', {
+                      method: 'POST',
+                      body: JSON.stringify({ updates }),
+                      headers: { 'Content-Type': 'application/json' }
+                    }).catch(console.error);
+                  }
+                }}
+                title="Wasserfall (Zeiten skriptbasiert berechnen)"
+                style={{ flex: 1, padding: '8px', fontSize: '0.9rem', background: 'var(--surface-border)', border: 'none', borderRadius: '8px', cursor: 'pointer', color: 'var(--foreground)' }}
+              >
+                ⬇️ Wasserfall
+              </button>
               <button 
                 onClick={() => setIsCopilotOpen(true)}
+                title="KI-Plan (Scheduling Copilot starten)"
+                style={{ flex: 1, padding: '8px', fontSize: '0.9rem', background: 'var(--primary)', border: 'none', borderRadius: '8px', cursor: 'pointer', color: '#fff', fontWeight: 'bold' }}
+              >
+                🪄 KI-Plan
+              </button>
+            </div>
+
+            {previewSchedule && (
+              <button 
+                onClick={saveSchedule}
                 style={{
-                  background: 'var(--primary)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '6px 12px',
-                  borderRadius: '12px',
-                  fontSize: '0.8rem',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
+                  width: '100%', marginBottom: '16px', padding: '12px 16px', background: '#10b981', color: 'white',
+                  border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer',
                 }}
               >
-                Optimize 🪄
+                Plan Speichern
               </button>
-            }
-          >
+            )}
+
             {processingContent}
             <SortableContext 
               items={todayTasks.map(t => t.id.toString())} 
@@ -394,7 +492,7 @@ export function TodayView({ tasks, onTaskUpdate, onToggle, onDelete, processingC
                             task={task} 
                             onToggle={onToggle} 
                             onDelete={onDelete} 
-                            onUpdate={onTaskUpdate}
+                            onUpdate={handleTaskUpdateWithWaterfall}
                           />
                         ))}
                       </div>
@@ -403,7 +501,7 @@ export function TodayView({ tasks, onTaskUpdate, onToggle, onDelete, processingC
                 </>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {todayTasks.map(task => (
+                  {activeTodayTasks.map(task => (
                     <SortableTaskItem 
                       key={task.id} 
                       task={task} 
@@ -412,6 +510,23 @@ export function TodayView({ tasks, onTaskUpdate, onToggle, onDelete, processingC
                       onUpdate={onTaskUpdate}
                     />
                   ))}
+                </div>
+              )}
+
+              {completedTasks.length > 0 && (
+                <div style={{ marginTop: '32px' }}>
+                  <h4 style={{ opacity: 0.5, borderBottom: '1px solid currentColor', paddingBottom: '4px', marginBottom: '12px' }}>Done</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {completedTasks.map(task => (
+                      <SortableTaskItem 
+                        key={task.id} 
+                        task={task} 
+                        onToggle={onToggle} 
+                        onDelete={onDelete} 
+                        onUpdate={onTaskUpdate}
+                      />
+                    ))}
+                  </div>
                 </div>
               )}
             </SortableContext>
