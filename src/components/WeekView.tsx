@@ -358,6 +358,9 @@ export function WeekView({ initialTasks, onTaskUpdate, onDelete, onToggle, proce
       return t;
     });
 
+    const activeTasks = tasksToRender.filter(t => !t.completed);
+    const completedTasks = tasksToRender.filter(t => t.completed);
+
     return (
       <div style={{ flex: '1 1 250px', minWidth: '250px' }}>
         <DroppableContainer 
@@ -390,7 +393,7 @@ export function WeekView({ initialTasks, onTaskUpdate, onDelete, onToggle, proce
             items={tasksToRender.map(t => t.id.toString())} 
             strategy={verticalListSortingStrategy}
           >
-            {tasksToRender.map(task => (
+            {activeTasks.map(task => (
               <SortableTaskItem 
                 key={`task-${task.id}`} 
                 task={task} 
@@ -399,6 +402,23 @@ export function WeekView({ initialTasks, onTaskUpdate, onDelete, onToggle, proce
                 onUpdate={onTaskUpdate}
               />
             ))}
+            
+            {completedTasks.length > 0 && (
+              <div style={{ marginTop: '24px' }}>
+                <h4 style={{ opacity: 0.5, borderBottom: '1px solid currentColor', paddingBottom: '4px', marginBottom: '8px' }}>Done</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {completedTasks.map(task => (
+                    <SortableTaskItem 
+                      key={`task-${task.id}`} 
+                      task={task} 
+                      onToggle={onToggle} 
+                      onDelete={onDelete} 
+                      onUpdate={onTaskUpdate}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </SortableContext>
         </DroppableContainer>
       </div>

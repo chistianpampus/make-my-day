@@ -127,7 +127,7 @@ export default function Home() {
         <p style={{ textAlign: 'center', opacity: 0.7, padding: '2rem' }}>Loading tasks...</p>
       ) : activeView === 'week' ? (
         <WeekView 
-          tasks={tasks}
+          initialTasks={tasks}
           onToggle={toggleTaskCompletion}
           onDelete={deleteTask}
           onTaskUpdate={updateTask}

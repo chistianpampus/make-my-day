@@ -99,13 +99,16 @@ export function TodayView({ tasks, onTaskUpdate, onToggle, onDelete, processingC
     }
   };
 
+  const activeTodayTasks = useMemo(() => todayTasks.filter(t => !t.completed), [todayTasks]);
+  const completedTasks = useMemo(() => todayTasks.filter(t => t.completed), [todayTasks]);
+
   const currentScheduleToRender = useMemo(() => {
     if (previewSchedule) return previewSchedule;
     
     if (schedule.length > 0) {
       const mixed: any[] = [];
-      // 1. Add all scheduled tasks using their LIVE DB times
-      todayTasks.forEach(t => {
+      // 1. Add all scheduled ACTIVE tasks using their LIVE DB times
+      activeTodayTasks.forEach(t => {
         if (t.scheduledStartTime) {
           mixed.push({ 
             type: 'task', 
@@ -128,15 +131,15 @@ export function TodayView({ tasks, onTaskUpdate, onToggle, onDelete, processingC
       });
     }
     return [];
-  }, [schedule, previewSchedule, todayTasks]);
+  }, [schedule, previewSchedule, activeTodayTasks]);
 
   const unscheduledTasks = useMemo(() => {
     if (currentScheduleToRender.length === 0) return [];
     if (previewSchedule) {
-      return todayTasks.filter(t => !previewSchedule.find((item: any) => item.type === 'task' && item.referenceId === t.id));
+      return activeTodayTasks.filter(t => !previewSchedule.find((item: any) => item.type === 'task' && item.referenceId === t.id));
     }
-    return todayTasks.filter(t => !t.scheduledStartTime);
-  }, [currentScheduleToRender, previewSchedule, todayTasks]);
+    return activeTodayTasks.filter(t => !t.scheduledStartTime);
+  }, [currentScheduleToRender, previewSchedule, activeTodayTasks]);
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(parseInt(event.active.id as string, 10));
@@ -255,7 +258,12 @@ export function TodayView({ tasks, onTaskUpdate, onToggle, onDelete, processingC
         const updates: Partial<Task> = {};
         let needsUpdate = false;
 
-        if (task.scheduledDate !== actualTarget) {
+        const isSame = 
+          (task.scheduledDate === actualTarget) || 
+          (!task.scheduledDate && actualTarget === null && targetContainerId === 'container-later') ||
+          (!task.scheduledDate && actualTarget === todayStr && targetContainerId === 'container-today');
+
+        if (!isSame) {
           updates.scheduledDate = actualTarget;
           // POINT 21: If date changes, clear the start time to avoid carrying over times to the new day!
           updates.scheduledStartTime = null;
