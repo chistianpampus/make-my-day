@@ -367,7 +367,7 @@ export function TodayView({ tasks, onTaskUpdate, onToggle, onDelete, processingC
           setIsCopilotOpen(false);
           setPreviewSchedule(null);
         }}
-        tasks={todayTasks}
+        tasks={todayTasks.filter(t => !t.completed)}
         targetDate={todayStr}
         onPreviewSchedule={setPreviewSchedule}
         onSaveSchedule={saveSchedule}

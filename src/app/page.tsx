@@ -62,7 +62,7 @@ export default function Home() {
         body: JSON.stringify({ 
           transcript: text,
           currentTime: new Date().toLocaleString(),
-          existingTasks: tasks
+          existingTasks: [] // Fix Point 4: Big microphone should only CREATE tasks, not edit existing ones.
         }),
       });
 
