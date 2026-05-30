@@ -97,10 +97,44 @@ export function TodayView({ tasks, onTaskUpdate, onToggle, onDelete, processingC
     }
   };
 
-  const currentScheduleToRender = previewSchedule || schedule;
-  const unscheduledTasks = currentScheduleToRender.length > 0 
-    ? todayTasks.filter(t => !currentScheduleToRender.find((item: any) => item.type === 'task' && item.referenceId === t.id))
-    : [];
+  const currentScheduleToRender = useMemo(() => {
+    if (previewSchedule) return previewSchedule;
+    
+    if (schedule.length > 0) {
+      const mixed: any[] = [];
+      // 1. Add all scheduled tasks using their LIVE DB times
+      todayTasks.forEach(t => {
+        if (t.scheduledStartTime) {
+          mixed.push({ 
+            type: 'task', 
+            referenceId: t.id, 
+            startTime: t.scheduledStartTime,
+            isLive: true // flag to indicate we should use live task data
+          });
+        }
+      });
+      // 2. Add routines and breaks from the saved AI schedule
+      schedule.forEach(item => {
+        if (item.type !== 'task') mixed.push(item);
+      });
+      // 3. Sort everything chronologically
+      return mixed.sort((a, b) => {
+        if (a.startTime && !b.startTime) return -1;
+        if (!a.startTime && b.startTime) return 1;
+        if (a.startTime && b.startTime) return a.startTime.localeCompare(b.startTime);
+        return 0;
+      });
+    }
+    return [];
+  }, [schedule, previewSchedule, todayTasks]);
+
+  const unscheduledTasks = useMemo(() => {
+    if (currentScheduleToRender.length === 0) return [];
+    if (previewSchedule) {
+      return todayTasks.filter(t => !previewSchedule.find((item: any) => item.type === 'task' && item.referenceId === t.id));
+    }
+    return todayTasks.filter(t => !t.scheduledStartTime);
+  }, [currentScheduleToRender, previewSchedule, todayTasks]);
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(parseInt(event.active.id as string, 10));
@@ -183,21 +217,25 @@ export function TodayView({ tasks, onTaskUpdate, onToggle, onDelete, processingC
       const task = todayTasks.find(t => t.id === item.referenceId);
       if (!task) return null;
 
-      let durationMinutes: number | null = null;
-      if (item.startTime && item.endTime) {
-        const [sh, sm] = item.startTime.split(':').map(Number);
-        const [eh, em] = item.endTime.split(':').map(Number);
-        if (!isNaN(sh) && !isNaN(eh)) {
-          const diff = (eh * 60 + em) - (sh * 60 + sm);
-          if (diff > 0) durationMinutes = diff;
-        }
-      }
+      let displayTask = { ...task };
 
-      const displayTask = {
-        ...task,
-        scheduledStartTime: item.startTime,
-        estimatedDuration: durationMinutes ?? task.estimatedDuration
-      };
+      // If we are previewing the schedule, override the task's properties with the AI's proposal
+      if (!item.isLive) {
+        let durationMinutes: number | null = null;
+        if (item.startTime && item.endTime) {
+          const [sh, sm] = item.startTime.split(':').map(Number);
+          const [eh, em] = item.endTime.split(':').map(Number);
+          if (!isNaN(sh) && !isNaN(eh)) {
+            const diff = (eh * 60 + em) - (sh * 60 + sm);
+            if (diff > 0) durationMinutes = diff;
+          }
+        }
+        displayTask = {
+          ...task,
+          scheduledStartTime: item.startTime,
+          estimatedDuration: durationMinutes ?? task.estimatedDuration
+        };
+      }
 
       return (
         <SortableTaskItem 

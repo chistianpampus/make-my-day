@@ -9,7 +9,7 @@ Notieren Sie hier einfach alles, was Ihnen während der Nutzung oder beim Testen
 *Hier alles eintragen, was nicht so funktioniert wie erwartet.*
 
 - [ ] 1 - Mikrofon ohne Freigabe (Fehler abfangen/besser handhaben)
-- [ ] 2-  Bei today-view und week-view wird ein anderer Ablauf der Tasks dargestellt (Inkonsistenz)
+- [x] 2-  Bei today-view und week-view wird ein anderer Ablauf der Tasks dargestellt, auch mit ganz anderen Zeiten und einer anderen Reihenfolge (Inkonsistenz)
 - [x] 3- Aufgaben, die schon abgeschlossen sind, nicht nochmal mitplanen lassen (AI Logik)
 - [x] 4- Die KI ersetzt manchmal bei EIngabe eines neuen Plans bestehende Tasks, statt neue zu erzeugen. Das darf nicht passieren. Der große Mikrofonbutton darf nur dazu führen, dass neue Tasks erzeugt werden. Nur Mikrofonbuttons, die auf den einzelnen Tasks auftauchen sollen, dürfen zum Bearbeiten von bestehenden Tasks führen. 
 
