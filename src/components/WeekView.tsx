@@ -188,9 +188,31 @@ export function WeekView({ tasks: initialTasks, onTaskUpdate, onToggle, onDelete
       const activeIndex = originalList.findIndex(t => t.id === taskId);
       const overIndex = originalList.findIndex(t => t.id === overTaskId);
 
-      if (activeIndex !== -1 && overIndex !== -1) {
-        const newArray = arrayMove(originalList, activeIndex, overIndex);
+      if (overIndex !== -1 && dateKey !== null) {
+        let newArray: Task[];
+        let activeTaskWasOutside = false;
+        
+        if (activeIndex !== -1) {
+          newArray = arrayMove(originalList, activeIndex, overIndex);
+        } else {
+          const activeTask = tasks.find(t => t.id === taskId);
+          if (!activeTask) return;
+          newArray = [...originalList];
+          newArray.splice(overIndex, 0, activeTask);
+          activeTaskWasOutside = true;
+        }
+
         const updates = getWaterfallUpdates(originalList, newArray);
+        
+        if (activeTaskWasOutside) {
+          // Update the date!
+          const activeUpdate = updates.find(u => u.id === taskId);
+          if (activeUpdate) {
+            activeUpdate.updates.scheduledDate = dateKey;
+          } else {
+            updates.push({ id: taskId, updates: { scheduledDate: dateKey }});
+          }
+        }
         
         if (updates.length > 0) {
           updates.forEach(u => onTaskUpdate(u.id, u.updates));

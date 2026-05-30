@@ -13,6 +13,7 @@ Notieren Sie hier einfach alles, was Ihnen während der Nutzung oder beim Testen
 - [x] 3- Aufgaben, die schon abgeschlossen sind, nicht nochmal mitplanen lassen (AI Logik)
 - [x] 4- Die KI ersetzt manchmal bei EIngabe eines neuen Plans bestehende Tasks, statt neue zu erzeugen. Das darf nicht passieren. Der große Mikrofonbutton darf nur dazu führen, dass neue Tasks erzeugt werden. Nur Mikrofonbuttons, die auf den einzelnen Tasks auftauchen sollen, dürfen zum Bearbeiten von bestehenden Tasks führen. 
 - [x] 21 Wenn bei einem Task der Tag geändert wird, z.B. durch Verschieben auf einen anderen Tag oder von der KI, dann darf die Zeit nicht von einem anderen Tag übernommen werden. Wenn sie unbestimmt ist, muss sie zurückgesetzt werden. 
+- [x] 22 Wenn ein Task verschoben wird und z.B. nach einem geplanten Task oder zwischen zwei bestehenden Tasks platziert wird, dann soll auch die Zeit des verschobenen Tasks entsprechend angepasst werden und die nachfolgenden Zeiten nach unten oder oben verschoben werden (je nachdem, was sinnvoller ist).  
 
 ## ✨ Neue Feature-Ideen & Anforderungen
 *Hier kommen Wünsche für neue Funktionen und Erweiterungen rein.*

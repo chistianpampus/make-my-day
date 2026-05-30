@@ -180,13 +180,35 @@ export function TodayView({ tasks, onTaskUpdate, onToggle, onDelete, processingC
       const activeIndex = originalList.findIndex(t => t.id === taskId);
       const overIndex = originalList.findIndex(t => t.id === overTaskId);
 
-      if (activeIndex !== -1 && overIndex !== -1) {
-        // Create reordered list using dnd-kit's arrayMove
-        const newArray = arrayMove(originalList, activeIndex, overIndex);
+      if (overIndex !== -1) {
+        let newArray: Task[];
+        let activeTaskWasOutside = false;
+
+        if (activeIndex !== -1) {
+          // Both in TODAY -> pure reorder
+          newArray = arrayMove(originalList, activeIndex, overIndex);
+        } else {
+          // Dragged from outside TODAY into TODAY
+          const activeTask = tasks.find(t => t.id === taskId);
+          if (!activeTask) return;
+          newArray = [...originalList];
+          newArray.splice(overIndex, 0, activeTask);
+          activeTaskWasOutside = true;
+        }
 
         // Waterfall time recalculation
         const updates = getWaterfallUpdates(originalList, newArray);
         
+        if (activeTaskWasOutside) {
+          // Also ensure the dragged task gets its date updated to Today!
+          const activeUpdate = updates.find(u => u.id === taskId);
+          if (activeUpdate) {
+            activeUpdate.updates.scheduledDate = todayStr;
+          } else {
+            updates.push({ id: taskId, updates: { scheduledDate: todayStr }});
+          }
+        }
+
         if (updates.length > 0) {
           // Optimistically update the UI to avoid flicker
           updates.forEach(u => onTaskUpdate(u.id, u.updates));
