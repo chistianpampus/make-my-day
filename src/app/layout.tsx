@@ -8,6 +8,11 @@ export const metadata: Metadata = {
   title: "Make My Day",
   description: "Your intelligent, voice-controlled day planner.",
   manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "My Day",
+  },
 };
 
 export const viewport: Viewport = {

@@ -140,7 +140,7 @@ export function TaskCard({ task, onToggle, onDelete, onUpdate }: TaskCardProps) 
           <span style={{ fontSize: '0.7rem', background: 'var(--surface-border)', padding: '2px 6px', borderRadius: '4px', opacity: 0.85, display: 'flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap', flexShrink: 0 }}>
             ⏱ <input type="number" value={duration} onChange={(e) => setDuration(e.target.value)} onBlur={() => handleUpdate('estimatedDuration', duration ? parseInt(duration) : null)} onKeyDown={handleKeyDown} style={{ width: '22px', background: 'transparent', border: 'none', color: 'inherit', fontSize: 'inherit', textAlign: 'center', outline: 'none', padding: 0 }} placeholder="0" /> min
           </span>
-          <button onClick={() => setIsAIEditOpen(!isAIEditOpen)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px', opacity: isAIEditOpen ? 1 : 0.6, flexShrink: 0 }} title="AI Edit">✨</button>
+          <button onClick={(e) => { e.stopPropagation(); setIsAIEditOpen(!isAIEditOpen); }} onPointerDown={(e) => e.stopPropagation()} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px', opacity: isAIEditOpen ? 1 : 0.6, flexShrink: 0 }} title="AI Edit">✨</button>
         </div>
       ) : (
         <>
@@ -151,6 +151,8 @@ export function TaskCard({ task, onToggle, onDelete, onUpdate }: TaskCardProps) 
                 type="checkbox" 
                 checked={task.completed} 
                 onChange={() => onToggle(task.id, task.completed)} 
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
                 style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--primary)' }}
                 aria-label="Mark completed"
               />
@@ -179,7 +181,8 @@ export function TaskCard({ task, onToggle, onDelete, onUpdate }: TaskCardProps) 
 
             <div className="task-actions-compact" style={{ display: 'flex', gap: '4px', opacity: 0.7 }}>
               <button 
-                onClick={() => setIsAIEditOpen(!isAIEditOpen)}
+                onClick={(e) => { e.stopPropagation(); setIsAIEditOpen(!isAIEditOpen); }}
+                onPointerDown={(e) => e.stopPropagation()}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '4px', opacity: isAIEditOpen ? 1 : 0.6 }}
                 title="AI Edit"
               >
@@ -278,7 +281,8 @@ export function TaskCard({ task, onToggle, onDelete, onUpdate }: TaskCardProps) 
 
           {/* Delete Button (Bottom Left) */}
           <button 
-            onClick={() => onDelete(task.id)}
+            onClick={(e) => { e.stopPropagation(); onDelete(task.id); }}
+            onPointerDown={(e) => e.stopPropagation()}
             style={{ position: 'absolute', bottom: '8px', left: '8px', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px', borderRadius: '4px', opacity: 0.6, transition: 'opacity 0.2s' }}
             title="Task löschen"
             onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
