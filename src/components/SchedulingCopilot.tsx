@@ -119,7 +119,7 @@ export function SchedulingCopilot({ isOpen, onClose, tasks, targetDate, onPrevie
       flexDirection: 'column'
     }}>
       <div style={{ padding: '16px', borderBottom: '1px solid var(--surface-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 style={{ margin: 0, fontSize: '1.2rem' }}>Scheduling Copilot 🪄</h2>
+        <h2 style={{ margin: 0, fontSize: '1.2rem' }}>Scheduling Copilot 🪄 <span style={{fontSize: '0.9rem', opacity: 0.7}}>({targetDate === new Date().toISOString().split('T')[0] ? 'Heute' : targetDate})</span></h2>
         <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--foreground)' }}>&times;</button>
       </div>
 

@@ -23,19 +23,26 @@ import { Task } from '../types';
 import { DroppableContainer } from './DroppableContainer';
 import { SortableTaskItem } from './SortableTaskItem';
 import { TaskCard } from './TaskCard';
+import { SchedulingCopilot } from './SchedulingCopilot';
 
 interface WeekViewProps {
-  tasks: Task[];
+  initialTasks: Task[];
   onTaskUpdate: (id: number, data: Partial<Task>) => void;
-  onToggle: (id: number, currentStatus: boolean) => void;
   onDelete: (id: number) => void;
+  onToggle: (id: number, completed: boolean) => void;
   processingContent?: React.ReactNode;
 }
 
-export function WeekView({ tasks: initialTasks, onTaskUpdate, onToggle, onDelete, processingContent }: WeekViewProps) {
+export function WeekView({ initialTasks, onTaskUpdate, onDelete, onToggle, processingContent }: WeekViewProps) {
   const [tasks, setTasks] = React.useState<Task[]>(initialTasks);
   const [activeId, setActiveId] = React.useState<number | null>(null);
   const [activeTargetContainerId, setActiveTargetContainerId] = React.useState<string | null>(null);
+
+  // States for Copilot / Day Planning
+  const [isCopilotOpen, setIsCopilotOpen] = React.useState(false);
+  const [copilotDate, setCopilotDate] = React.useState<string | null>(null);
+  const [copilotTasks, setCopilotTasks] = React.useState<Task[]>([]);
+  const [previewSchedule, setPreviewSchedule] = React.useState<any[] | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -51,6 +58,77 @@ export function WeekView({ tasks: initialTasks, onTaskUpdate, onToggle, onDelete
   React.useEffect(() => {
     setTasks(initialTasks);
   }, [initialTasks]);
+
+  const applyWaterfallForDate = async (dateKey: string | null) => {
+    const list = getTasksForDate(dateKey);
+    if (list.length === 0) return;
+    const updates = getWaterfallUpdates(list, list);
+    if (updates.length > 0) {
+      updates.forEach(u => onTaskUpdate(u.id, u.updates));
+      try {
+        await fetch('/api/tasks/bulk-update', {
+          method: 'POST',
+          body: JSON.stringify({ updates }),
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (err) {
+        console.error("Bulk update failed", err);
+      }
+    }
+  };
+
+  const handleOpenCopilot = (dateKey: string | null) => {
+    setCopilotDate(dateKey);
+    setCopilotTasks(getTasksForDate(dateKey));
+    setPreviewSchedule(null);
+    setIsCopilotOpen(true);
+  };
+
+  const handleSaveSchedule = async () => {
+    if (!previewSchedule) return;
+    
+    // In WeekView, we only save the task times, because it's a lightweight view
+    // (We extract all task updates from the schedule array)
+    const taskUpdates = previewSchedule
+      .filter((s: any) => s.type === 'task' && s.referenceId)
+      .map((s: any) => ({
+        id: s.referenceId,
+        updates: {
+          scheduledStartTime: s.startTime,
+          estimatedDuration: s.duration || 30
+        }
+      }));
+
+    if (taskUpdates.length > 0) {
+      taskUpdates.forEach((u: any) => onTaskUpdate(u.id, u.updates));
+      try {
+        await fetch('/api/tasks/bulk-update', {
+          method: 'POST',
+          body: JSON.stringify({ updates: taskUpdates }),
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (err) {
+        console.error("Bulk update failed", err);
+      }
+    }
+    
+    // Also save the full schedule via /api/schedule to persist routines if the user wants them
+    // Actually, calling /api/schedule ensures routines are saved too!
+    const dateToSave = copilotDate || new Date().toISOString().split('T')[0];
+    try {
+      await fetch('/api/schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: dateToSave,
+          schedule: previewSchedule
+        })
+      });
+      // The parent component should refetch, but we already optimistically updated tasks
+    } catch(err) {
+      console.error(err);
+    }
+  };
 
   const getTasksForDate = (dateStr: string | null) => {
     return tasks.filter(t => {
@@ -258,33 +336,74 @@ export function WeekView({ tasks: initialTasks, onTaskUpdate, onToggle, onDelete
     }
   };
 
-  const renderColumn = (id: string, title: string, subtitle: string, columnTasks: Task[], includeProcessing = false) => (
-    <div style={{ flex: '1 1 250px', minWidth: '250px' }}>
-      <DroppableContainer 
-        id={id} 
-        title={title} 
-        subtitle={subtitle}
-        emptyText="No tasks scheduled."
-        isHighlighted={activeTargetContainerId === id}
-      >
-        {includeProcessing && processingContent}
-        <SortableContext 
-          items={columnTasks.map(t => t.id.toString())} 
-          strategy={verticalListSortingStrategy}
+  const renderColumn = (id: string, title: string, subtitle: string, columnTasks: Task[], dateKey: string | null, includeProcessing = false) => {
+    // Apply preview times if the copilot is generating a schedule for THIS date
+    const tasksToRender = columnTasks.map(t => {
+      if (previewSchedule && copilotDate === dateKey) {
+        const pTask = previewSchedule.find(s => s.type === 'task' && s.referenceId === t.id);
+        if (pTask) {
+          // Calculate duration if it has start and end times
+          let durationMinutes = t.estimatedDuration;
+          if (pTask.startTime && pTask.endTime) {
+            const [sh, sm] = pTask.startTime.split(':').map(Number);
+            const [eh, em] = pTask.endTime.split(':').map(Number);
+            if (!isNaN(sh) && !isNaN(eh)) {
+              const diff = (eh * 60 + em) - (sh * 60 + sm);
+              if (diff > 0) durationMinutes = diff;
+            }
+          }
+          return { ...t, scheduledStartTime: pTask.startTime, estimatedDuration: durationMinutes };
+        }
+      }
+      return t;
+    });
+
+    return (
+      <div style={{ flex: '1 1 250px', minWidth: '250px' }}>
+        <DroppableContainer 
+          id={id} 
+          title={title} 
+          subtitle={subtitle}
+          emptyText="No tasks scheduled."
+          isHighlighted={activeTargetContainerId === id}
         >
-          {columnTasks.map(task => (
-            <SortableTaskItem 
-              key={task.id} 
-              task={task} 
-              onToggle={onToggle} 
-              onDelete={onDelete} 
-              onUpdate={onTaskUpdate}
-            />
-          ))}
-        </SortableContext>
-      </DroppableContainer>
-    </div>
-  );
+          {dateKey !== null && (
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', justifyContent: 'center' }}>
+              <button 
+                onClick={() => applyWaterfallForDate(dateKey)}
+                title="Wasserfall (Zeiten skriptbasiert berechnen)"
+                style={{ flex: 1, padding: '4px 8px', fontSize: '0.8rem', background: 'var(--surface-border)', border: 'none', borderRadius: '4px', cursor: 'pointer', color: 'var(--foreground)' }}
+              >
+                ⬇️ Wasserfall
+              </button>
+              <button 
+                onClick={() => handleOpenCopilot(dateKey)}
+                title="KI-Plan (Scheduling Copilot starten)"
+                style={{ flex: 1, padding: '4px 8px', fontSize: '0.8rem', background: 'var(--primary)', border: 'none', borderRadius: '4px', cursor: 'pointer', color: '#fff' }}
+              >
+                🪄 KI-Plan
+              </button>
+            </div>
+          )}
+          {includeProcessing && processingContent}
+          <SortableContext 
+            items={tasksToRender.map(t => t.id.toString())} 
+            strategy={verticalListSortingStrategy}
+          >
+            {tasksToRender.map(task => (
+              <SortableTaskItem 
+                key={`task-${task.id}`} 
+                task={task} 
+                onToggle={onToggle} 
+                onDelete={onDelete} 
+                onUpdate={onTaskUpdate}
+              />
+            ))}
+          </SortableContext>
+        </DroppableContainer>
+      </div>
+    );
+  };
 
   return (
     <DndContext 
@@ -295,12 +414,21 @@ export function WeekView({ tasks: initialTasks, onTaskUpdate, onToggle, onDelete
       onDragEnd={handleDragEnd}
     >
       <div className="week-view-container" style={{ display: 'flex', gap: '16px', padding: '16px', overflowX: 'auto', minHeight: 'calc(100vh - 200px)' }}>
-        {renderColumn('container-today', 'TODAY', format(today, 'MMM d, EEEE'), todayTasks, true)}
-        {renderColumn('container-tomorrow', 'TOMORROW', format(addDays(today, 1), 'MMM d, EEEE'), tomorrowTasks)}
-        {renderColumn('container-day2', format(addDays(today, 2), 'EEEE'), format(addDays(today, 2), 'MMM d'), day2Tasks)}
-        {renderColumn('container-day3', format(addDays(today, 3), 'EEEE'), format(addDays(today, 3), 'MMM d'), day3Tasks)}
-        {renderColumn('container-later', 'LATER', 'Backlog & Future', laterTasks)}
+        {renderColumn('container-today', 'Heute', format(today, 'EEEE, d. MMM'), todayTasks, todayStr, true)}
+        {renderColumn('container-tomorrow', 'Morgen', format(addDays(today, 1), 'EEEE, d. MMM'), tomorrowTasks, tomorrowStr)}
+        {renderColumn('container-day2', format(addDays(today, 2), 'EEEE'), format(addDays(today, 2), 'd. MMM'), day2Tasks, day2Str)}
+        {renderColumn('container-day3', format(addDays(today, 3), 'EEEE'), format(addDays(today, 3), 'd. MMM'), day3Tasks, day3Str)}
+        {renderColumn('container-later', 'Später', 'Ungeplant', laterTasks, null)}
       </div>
+
+      <SchedulingCopilot 
+        isOpen={isCopilotOpen}
+        onClose={() => setIsCopilotOpen(false)}
+        tasks={copilotTasks}
+        targetDate={copilotDate || todayStr}
+        onPreviewSchedule={(sched) => setPreviewSchedule(sched)}
+        onSaveSchedule={handleSaveSchedule}
+      />
 
       <DragOverlay>
         {activeTask ? (
