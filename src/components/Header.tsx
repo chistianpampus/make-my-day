@@ -3,6 +3,8 @@
 import React from 'react';
 import { useCompactView } from '../contexts/CompactViewContext';
 
+import packageJson from '../../package.json';
+
 interface HeaderProps {
   onClearDB?: () => void;
 }
@@ -13,7 +15,10 @@ export function Header({ onClearDB }: HeaderProps) {
   return (
     <header className="header" style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
       <div>
-        <h1 style={{ margin: 0 }}>Make My Day</h1>
+        <h1 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          Make My Day
+          <span style={{ fontSize: '0.6rem', padding: '2px 6px', background: 'var(--surface-border)', borderRadius: '4px', opacity: 0.6 }}>v{packageJson.version}</span>
+        </h1>
         <p style={{ margin: '4px 0 0 0' }}>Your Voice-Controlled Daily Planner</p>
       </div>
       
