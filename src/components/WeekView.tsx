@@ -227,7 +227,10 @@ export function WeekView({ tasks: initialTasks, onTaskUpdate, onToggle, onDelete
           (!originalTask.scheduledDate && actualTarget === todayStr && targetContainerId === 'container-today');
 
         if (!isSame) {
-          onTaskUpdate(taskId, { scheduledDate: actualTarget });
+          onTaskUpdate(taskId, { 
+            scheduledDate: actualTarget,
+            scheduledStartTime: null // POINT 21: Clear time when moving to another day
+          });
         }
       }
     }

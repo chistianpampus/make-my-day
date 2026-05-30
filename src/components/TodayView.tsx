@@ -235,10 +235,7 @@ export function TodayView({ tasks, onTaskUpdate, onToggle, onDelete, processingC
 
         if (task.scheduledDate !== actualTarget) {
           updates.scheduledDate = actualTarget;
-          needsUpdate = true;
-        }
-
-        if (targetContainerId === 'container-later' && actualTarget === null && task.scheduledStartTime !== null) {
+          // POINT 21: If date changes, clear the start time to avoid carrying over times to the new day!
           updates.scheduledStartTime = null;
           needsUpdate = true;
         }

@@ -12,6 +12,7 @@ Notieren Sie hier einfach alles, was Ihnen während der Nutzung oder beim Testen
 - [x] 2-  Bei today-view und week-view wird ein anderer Ablauf der Tasks dargestellt, auch mit ganz anderen Zeiten und einer anderen Reihenfolge (Inkonsistenz)
 - [x] 3- Aufgaben, die schon abgeschlossen sind, nicht nochmal mitplanen lassen (AI Logik)
 - [x] 4- Die KI ersetzt manchmal bei EIngabe eines neuen Plans bestehende Tasks, statt neue zu erzeugen. Das darf nicht passieren. Der große Mikrofonbutton darf nur dazu führen, dass neue Tasks erzeugt werden. Nur Mikrofonbuttons, die auf den einzelnen Tasks auftauchen sollen, dürfen zum Bearbeiten von bestehenden Tasks führen. 
+- [x] 21 Wenn bei einem Task der Tag geändert wird, z.B. durch Verschieben auf einen anderen Tag oder von der KI, dann darf die Zeit nicht von einem anderen Tag übernommen werden. Wenn sie unbestimmt ist, muss sie zurückgesetzt werden. 
 
 ## ✨ Neue Feature-Ideen & Anforderungen
 *Hier kommen Wünsche für neue Funktionen und Erweiterungen rein.*

@@ -28,6 +28,16 @@ export class TaskService {
   }
 
   static async updateTask(id: number, data: Partial<{ completed: boolean, title: string, timeConstraint: string | null, scheduledStartTime: string | null, priority: string, estimatedDuration: number | null, scheduledDate: string | null }>) {
+    // POINT 21: If date is changing, and start time isn't explicitly provided in this update, clear it.
+    if (data.scheduledDate !== undefined) {
+      const currentTask = await prisma.task.findUnique({ where: { id } });
+      if (currentTask && currentTask.scheduledDate !== data.scheduledDate) {
+        if (data.scheduledStartTime === undefined) {
+          data.scheduledStartTime = null;
+        }
+      }
+    }
+
     return await prisma.task.update({
       where: { id },
       data
