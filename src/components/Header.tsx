@@ -17,7 +17,7 @@ export function Header({ onClearDB }: HeaderProps) {
       <div>
         <h1 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
           Make My Day
-          <span style={{ fontSize: '0.6rem', padding: '2px 6px', background: 'var(--primary)', borderRadius: '4px', opacity: 0.9, color: 'white' }}>v{packageJson.version}</span>
+          <span style={{ fontSize: '0.6rem', padding: '2px 6px', background: 'var(--primary)', borderRadius: '4px', opacity: 0.9, color: 'white' }}>v0.1.1</span>
         </h1>
         <p style={{ margin: '4px 0 0 0' }}>Your Voice-Controlled Daily Planner</p>
       </div>
