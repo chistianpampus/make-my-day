@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     }
 
     const taskUpdates = updates.map((update: any) => {
-      const { id, ...data } = update;
+      const { id, updates: data } = update;
       return prisma.task.update({
         where: { id },
         data
