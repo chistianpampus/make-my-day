@@ -100,7 +100,7 @@ export function TodayView({ tasks, onTaskUpdate, onToggle, onDelete, processingC
   };
 
   const activeTodayTasks = useMemo(() => todayTasks.filter(t => !t.completed), [todayTasks]);
-  const completedTasks = useMemo(() => todayTasks.filter(t => t.completed), [todayTasks]);
+  const completedTasks = useMemo(() => todayTasks.filter(t => t.completed && t.scheduledDate === todayStr), [todayTasks, todayStr]);
 
   const currentScheduleToRender = useMemo(() => {
     if (previewSchedule) return previewSchedule;
