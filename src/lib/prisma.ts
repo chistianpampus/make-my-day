@@ -9,16 +9,10 @@ let prisma: PrismaClient;
 if (globalForPrisma.prisma) {
   prisma = globalForPrisma.prisma;
 } else {
-  if (!process.env.TURSO_DATABASE_URL) {
-    throw new Error('Bitte setzen Sie TURSO_DATABASE_URL (und TURSO_AUTH_TOKEN) in der .env.local Datei.');
-  }
-
-  const libsql = createClient({
-    url: process.env.TURSO_DATABASE_URL,
+  const adapter = new PrismaLibSql({
+    url: process.env.TURSO_DATABASE_URL!,
     authToken: process.env.TURSO_AUTH_TOKEN,
   });
-
-  const adapter = new PrismaLibSql(libsql);
   prisma = new PrismaClient({ adapter });
 }
 
