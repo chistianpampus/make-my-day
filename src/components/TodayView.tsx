@@ -16,6 +16,8 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { addDays, format, startOfToday } from 'date-fns';
+import { arrayMove } from '@dnd-kit/sortable';
+import { getWaterfallUpdates } from '../lib/timeUtils';
 
 import { Task } from '../types';
 import { DroppableContainer } from './DroppableContainer';
@@ -153,7 +155,7 @@ export function TodayView({ tasks, onTaskUpdate, onToggle, onDelete, processingC
     setActiveTargetContainerId(targetContainerId);
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
     setActiveTargetContainerId(null);
@@ -161,9 +163,47 @@ export function TodayView({ tasks, onTaskUpdate, onToggle, onDelete, processingC
     if (!over) return;
 
     const taskId = parseInt(active.id as string, 10);
-    let targetContainerId = over.id as string;
+    const overIdStr = over.id as string;
+    let targetContainerId = overIdStr;
+    let isReorderingWithinSameDay = false;
+    let overTaskId: number | null = null;
+
     if (!targetContainerId.startsWith('container-')) {
+      overTaskId = parseInt(overIdStr, 10);
       targetContainerId = 'container-today';
+      isReorderingWithinSameDay = true;
+    }
+
+    if (isReorderingWithinSameDay && overTaskId && overTaskId !== taskId) {
+      // It was dropped onto another task in TODAY
+      const originalList = [...todayTasks];
+      const activeIndex = originalList.findIndex(t => t.id === taskId);
+      const overIndex = originalList.findIndex(t => t.id === overTaskId);
+
+      if (activeIndex !== -1 && overIndex !== -1) {
+        // Create reordered list using dnd-kit's arrayMove
+        const newArray = arrayMove(originalList, activeIndex, overIndex);
+
+        // Waterfall time recalculation
+        const updates = getWaterfallUpdates(originalList, newArray);
+        
+        if (updates.length > 0) {
+          // Optimistically update the UI to avoid flicker
+          updates.forEach(u => onTaskUpdate(u.id, u.updates));
+          
+          // Fire API call to bulk update
+          try {
+            await fetch('/api/tasks/bulk-update', {
+              method: 'POST',
+              body: JSON.stringify({ updates }),
+              headers: { 'Content-Type': 'application/json' }
+            });
+          } catch (err) {
+            console.error("Bulk update failed", err);
+          }
+        }
+      }
+      return; // done with reordering
     }
 
     // Determine target date based on the container dropped into
@@ -198,8 +238,6 @@ export function TodayView({ tasks, onTaskUpdate, onToggle, onDelete, processingC
           needsUpdate = true;
         }
 
-        // If moved to later without a date, we must clear the timeframe too,
-        // otherwise it will be caught by the "implicitly today" filter!
         if (targetContainerId === 'container-later' && actualTarget === null && task.scheduledStartTime !== null) {
           updates.scheduledStartTime = null;
           needsUpdate = true;

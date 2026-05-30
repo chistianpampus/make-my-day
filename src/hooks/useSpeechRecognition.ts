@@ -78,7 +78,9 @@ export const useSpeechRecognition = () => {
       try {
         // Explicitly request microphone permission first to force iOS/Safari prompt
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-          await navigator.mediaDevices.getUserMedia({ audio: true });
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          // Stop the tracks immediately so we don't hold the mic hostage
+          stream.getTracks().forEach(track => track.stop());
         }
         recognitionRef.current.start();
       } catch (err: any) {

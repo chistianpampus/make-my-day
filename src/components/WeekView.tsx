@@ -14,8 +14,10 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
+  arrayMove
 } from '@dnd-kit/sortable';
 import { addDays, format, startOfToday } from 'date-fns';
+import { getWaterfallUpdates } from '../lib/timeUtils';
 
 import { Task } from '../types';
 import { DroppableContainer } from './DroppableContainer';
@@ -143,7 +145,7 @@ export function WeekView({ tasks: initialTasks, onTaskUpdate, onToggle, onDelete
     }
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
     setActiveTargetContainerId(null);
@@ -151,10 +153,13 @@ export function WeekView({ tasks: initialTasks, onTaskUpdate, onToggle, onDelete
     if (!over) return;
 
     const taskId = parseInt(active.id as string, 10);
-    let targetContainerId = over.id as string;
+    const overIdStr = over.id as string;
+    let targetContainerId = overIdStr;
+    let overTaskId: number | null = null;
+    let isReorderingWithinSameDay = false;
     
     if (!targetContainerId.startsWith('container-')) {
-      const overTaskId = parseInt(targetContainerId, 10);
+      overTaskId = parseInt(targetContainerId, 10);
       const overTask = tasks.find(t => t.id === overTaskId);
       if (overTask) {
         const sd = overTask.scheduledDate;
@@ -166,7 +171,41 @@ export function WeekView({ tasks: initialTasks, onTaskUpdate, onToggle, onDelete
         else if (sd === day2Str) targetContainerId = 'container-day2';
         else if (sd === day3Str) targetContainerId = 'container-day3';
         else targetContainerId = 'container-later';
+        
+        isReorderingWithinSameDay = true;
       }
+    }
+
+    if (isReorderingWithinSameDay && overTaskId && overTaskId !== taskId) {
+      // Determine the list we are reordering in
+      let dateKey: string | null = null;
+      if (targetContainerId === 'container-today') dateKey = todayStr;
+      else if (targetContainerId === 'container-tomorrow') dateKey = tomorrowStr;
+      else if (targetContainerId === 'container-day2') dateKey = day2Str;
+      else if (targetContainerId === 'container-day3') dateKey = day3Str;
+      
+      const originalList = getTasksForDate(dateKey);
+      const activeIndex = originalList.findIndex(t => t.id === taskId);
+      const overIndex = originalList.findIndex(t => t.id === overTaskId);
+
+      if (activeIndex !== -1 && overIndex !== -1) {
+        const newArray = arrayMove(originalList, activeIndex, overIndex);
+        const updates = getWaterfallUpdates(originalList, newArray);
+        
+        if (updates.length > 0) {
+          updates.forEach(u => onTaskUpdate(u.id, u.updates));
+          try {
+            await fetch('/api/tasks/bulk-update', {
+              method: 'POST',
+              body: JSON.stringify({ updates }),
+              headers: { 'Content-Type': 'application/json' }
+            });
+          } catch (err) {
+            console.error("Bulk update failed", err);
+          }
+        }
+      }
+      return;
     }
 
     let targetDate: string | null = null;
