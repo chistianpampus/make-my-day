@@ -52,7 +52,11 @@ export const useSpeechRecognition = () => {
 
       recognition.onerror = (event: any) => {
         setIsListening(false);
-        setError(`Microphone error: ${event.error}. Please ensure permissions are granted.`);
+        if (event.error === 'not-allowed') {
+          setError("Mikrofon-Zugriff verweigert. Bitte Einstellungen prüfen.");
+        } else {
+          setError(`Mikrofon-Fehler: ${event.error}. Bitte prüfe die Freigabe.`);
+        }
       };
 
       recognition.onend = () => {
@@ -69,12 +73,22 @@ export const useSpeechRecognition = () => {
     };
   }, []);
 
-  const startListening = useCallback(() => {
+  const startListening = useCallback(async () => {
     if (recognitionRef.current && !isListening) {
       try {
+        // Explicitly request microphone permission first to force iOS/Safari prompt
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          await navigator.mediaDevices.getUserMedia({ audio: true });
+        }
         recognitionRef.current.start();
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to start speech recognition", err);
+        setIsListening(false);
+        if (err.name === 'NotAllowedError' || err.message?.includes('permission')) {
+          setError("Mikrofon-Zugriff verweigert. Bitte erlaube den Zugriff in deinen Browser-Einstellungen.");
+        } else {
+          setError("Fehler beim Starten des Mikrofons: " + (err.message || "Unbekannter Fehler"));
+        }
       }
     }
   }, [isListening]);
