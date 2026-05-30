@@ -1,6 +1,6 @@
 import { PrismaClient } from '../generated/prisma/client';
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
-import path from 'path';
+import { PrismaLibSQL } from '@prisma/adapter-libsql';
+import { createClient } from '@libsql/client';
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
@@ -9,9 +9,16 @@ let prisma: PrismaClient;
 if (globalForPrisma.prisma) {
   prisma = globalForPrisma.prisma;
 } else {
-  // Use the dev.db in the root directory (where Prisma 7 config pushes it)
-  const dbPath = path.join(process.cwd(), 'dev.db');
-  const adapter = new PrismaBetterSqlite3({ url: `file:${dbPath}` });
+  if (!process.env.TURSO_DATABASE_URL) {
+    throw new Error('Bitte setzen Sie TURSO_DATABASE_URL (und TURSO_AUTH_TOKEN) in der .env.local Datei.');
+  }
+
+  const libsql = createClient({
+    url: process.env.TURSO_DATABASE_URL,
+    authToken: process.env.TURSO_AUTH_TOKEN,
+  });
+
+  const adapter = new PrismaLibSQL(libsql);
   prisma = new PrismaClient({ adapter });
 }
 
